@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Document</title>
+
+<style type="text/css">
+
+body {
+
+margin: 0;
+
+}
+
+header {
+
+border-bottom: 2px solid #000;
+
+height: 40px;
+
+line-height: 40px;
+
+text-align: center;
+
+}
+
+.file {
+
+margin: 20px;
+
+float: left;
+
+position: relative;
+
+width: 100px;
+
+height: 110px;
+
+border-radius: 5px;
+
+border: 1px solid rgba(0, 0, 0, 0);
+
+background: url(img/file.png) no-repeat center 25px;
+
+cursor: pointer;
+
+}
+
+.file input {
+
+position: absolute;
+
+left: 3px;
+
+top: 3px;
+
+display: none;
+
+}
+
+.fileName {
+
+position: absolute;
+
+left: 5px;
+
+bottom: 10px;
+
+width: 90px;
+
+font: 12px/20px Arial,"宋体";
+
+text-align: center;
+
+white-space: nowrap;
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+
+}
+
+.fileShow {
+
+border: 1px solid #000;
+
+background-color: #f1f1f1;
+
+}
+
+.fileShow input {
+
+display: block;
+
+}
+
+.info {
+
+position: fixed;
+
+left: 0;
+
+top: 0;
+
+width: 100%;
+
+height: 50px;
+
+font: 30px/50px "宋体";
+
+text-align: center;
+
+transform: translateY(-50px);
+
+background: #ccc;
+
+}
+
+</style>
+
+<!--
+
+contenteditable 使内容可以编辑
+
+-->
+
+<script type="text/javascript">
+
+window.onload = function(){
+
+var creat = document.querySelector('.creat');
+
+var del = document.querySelector('.del');
+
+var wrap = document.querySelector('.wrap');
+
+var info = document.querySelector('.info');
+
+var timer = 0;
+
+creat.onclick = function(){
+
+/* 创建元素，并添加事件 */
+
+var file = document.createElement('p');
+
+var fileName = getFileName();
+
+file.className = "file";
+
+file.innerHTML = '<input type="checkbox" name=""><span class="fileName" contenteditable>'+fileName+'</span>';
+
+var check = file.querySelector('input[type = "checkbox"]');
+
+var fileName = file.querySelector('.fileName');
+
+file.onmouseover = function(){
+
+this.className = "file fileShow";
+
+};
+
+file.onmouseout= function(){
+
+if(!check.checked){
+
+this.className = "file";
+
+}
+
+};
+
+fileName.onblur = function(){
+
+if(this.innerHTML.trim() == ""){
+
+info.innerHTML = "请输入文件夹名字";
+
+info.style.transform = "translateY(0)";
+
+this.focus();
+
+clearTimeout(timer);
+
+timer=setTimeout(function(){
+
+info.style.transform = "translateY(-50px)";
+
+},2000);
+
+return;
+
+}
+
+var fileNames = document.querySelectorAll('.fileName');
+
+for(var i = 0; i < fileNames.length; i++){
+
+if(this != fileNames[i]&&this.innerHTML == fileNames[i].innerHTML){
+
+info.innerHTML = "文件夹名字重名了，请重新输入";
+
+info.style.transform = "translateY(0)";
+
+this.focus();
+
+clearTimeout(timer);
+
+timer=setTimeout(function(){
+
+info.style.transform = "translateY(-50px)";
+
+},2000);
+
+}
+
+}
+
+};
+
+/*onkeydown 键盘按下 */
+
+fileName.onkeydown = function(){
+
+if(this.innerHTML == "请输入名字"){
+
+this.innerHTML = "";
+
+}
+
+}
+
+wrap.appendChild(file);
+
+};
+
+del.onclick = function(){
+
+/* 删除选中的元素 */
+
+var fileName = wrap.querySelectorAll('input:checked+.fileName');
+
+var input = wrap.getElementsByTagName("input")
+
+/* query方法只获取一次，dom修改了如果不重新获取，它是不会和dom同步的而get方法会时时和dom同步，dom改了get获取到的数据也会自定修改 */
+
+//console.log(fileName,input);
+
+for(var i = 0; i < fileName.length; i++){
+
+wrap.removeChild(fileName[i].parentNode);
+
+}
+
+console.log(fileName);
+
+};
+
+// 获取文件夹名字
+
+/*
+
+创建文件夹名字并进行排序
+
+0 新建文件夹
+
+1 新建文件夹2
+
+2 新建文件夹3
+
+
+
+第一种情况：正常排序
+
+*/
+
+function getFileName(){
+
+var fileName = "新建文件夹";
+
+var fileNameLast = "";
+
+var fileNames = wrap.querySelectorAll('.fileName');
+
+if(fileNames.length == 0){ //当前一个都还没有也就是创建第0个
+
+return fileName;
+
+}
+
+// 当中间可能删除了几个
+
+/*
+
+由于中间会删除再添加，所以顺序会被打乱
+
+把所有的名字存入数组，然后进行排序
+
+*/
+
+var names = [];
+
+for(var i = 0; i < fileNames.length; i++){
+
+names.push(fileNames[i].innerHTML);
+
+}
+
+
+
+names = names.filter(function(val){
+
+var startName = val.substr(0,5);
+
+if(startName != "新建文件夹"){
+
+return false;/*筛选掉不是已新建文件夹命名的*/
+
+}
+
+var lastName = val.substr(5);
+
+if(isNaN(lastName)){ /*筛选掉不是已新建文件夹跟随的不是数字的*/
+
+return false;
+
+}
+
+return true;
+
+});
+
+names.sort(function(a,b){
+
+return a.substr(5) - b.substr(5);
+
+});
+
+console.log(names);
+
+for(var i = 0; i < names.length; i++){
+
+if(names[0] != fileName){
+
+return fileName;
+
+}
+
+if(i>0 && names[i] != fileName+(i+1)){
+
+return fileName+(i+1);
+
+}
+
+}
+
+//当前顺序向后排列 name 就等于在当前的个数上+1
+
+fileNameLast = names.length + 1;
+
+fileName += fileNameLast;
+
+return fileName;
+
+}
+
+};
+
+</script>
+
+</head>
+
+<body>
+
+<p class="info"></p>
+
+<header>
+
+<input type="button" value="新建文件夹" class="creat" />
+
+<input type="button" value="删除文件夹" class="del" />
+
+</header>
+
+<p class="wrap">
+
+<!-- <p class="file fileShow">
+
+<input type="checkbox" name="">
+
+<span class="fileName">新建文件夹新建文件夹</span>
+
+</p> -->
+
+</p>
+
+</body>
+
+</html>

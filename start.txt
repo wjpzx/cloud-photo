@@ -1,0 +1,4 @@
+ssl替换路径，upload下以及../serendipity/下面wang_b...pem需要把b后面的删除
+fdfs启动命令
+fdfs_storaged /etc/fdfs/storage.conf
+fdfs_trackerd /etc/fdfs/tracker.conf

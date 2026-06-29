@@ -1,0 +1,19 @@
+[Unit]
+Description=FastDFS storaged service
+After=network-online.target fdfs_trackerd.service
+
+[Service]
+Type=forking
+PIDFile=/var/fdfs/storage/data/fdfs_storaged.pid
+ExecStart=/usr/bin/fdfs_storaged /etc/fdfs/storage.conf start
+ExecStartPost=/bin/sleep 0.1
+ExecStop=/usr/bin/fdfs_storaged /etc/fdfs/storage.conf stop
+
+# No artificial start/stop timeout
+TimeoutSec=0
+
+# Disable OOM kill by Linux kernel
+OOMScoreAdjust=-1000
+
+[Install]
+WantedBy=multi-user.target

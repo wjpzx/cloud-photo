@@ -1,0 +1,17 @@
+[Unit]
+Description=uWSGI 云相册项目
+After=network.target mysql.service redis.service fdfs_trackerd.service fdfs_storaged.service
+Requires=fdfs_trackerd.service fdfs_storaged.service
+
+[Service]
+Type=simple
+User=test
+Group=test
+WorkingDirectory=/home/test/upload
+ExecStart=/home/test/upload/venv/bin/uwsgi --master --processes 2 --threads 4 --http 0.0.0.0:8000 --module upload.wsgi:application --vacuum --pidfile /home/test/upload/uwsgi.pid
+ExecStop=/home/test/upload/venv/bin/uwsgi --stop /home/test/upload/uwsgi.pid
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云相册</title>
+    <link href="/static/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/lib/font-awesome/css/all.min.css" rel="stylesheet">
+    <script src="/static/lib/jquery/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Navbar --- */
+        .navbar-custom {
+            background: linear-gradient(135deg, #1e3c72, #6a3093);
+            padding: 0.8rem 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+        .navbar-custom .navbar-brand {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+        .navbar-custom .navbar-brand i {
+            margin-right: 0.5rem;
+        }
+        .navbar-custom .btn-logout {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            border-radius: 0.5rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+        .navbar-custom .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+            color: #fff;
+        }
+
+        /* --- Upload Area --- */
+        .upload-area {
+            border: 2px dashed #c0c0c0;
+            border-radius: 1rem;
+            background: #fff;
+            padding: 2rem;
+            text-align: center;
+            transition: border-color 0.3s, background 0.3s;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+        }
+        .upload-area:hover,
+        .upload-area.drag-over {
+            border-color: #6a3093;
+            background: #f9f0ff;
+        }
+        .upload-area i {
+            font-size: 3rem;
+            color: #6a3093;
+            margin-bottom: 0.5rem;
+        }
+        .upload-area p {
+            margin: 0;
+            color: #666;
+        }
+        .upload-area .btn-upload {
+            background: linear-gradient(135deg, #1e3c72, #6a3093);
+            color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1.5rem;
+            margin-top: 1rem;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+        .upload-area .btn-upload:hover {
+            opacity: 0.85;
+            color: #fff;
+        }
+
+        /* --- Photo Grid --- */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 1200px) {
+            .photo-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .photo-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .photo-grid { grid-template-columns: repeat(1, 1fr); }
+        }
+
+        .photo-card {
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .photo-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .photo-card img {
+            width: 100%;
+            display: block;
+            cursor: pointer;
+        }
+        .photo-card .photo-info {
+            padding: 0.6rem 0.8rem;
+            font-size: 0.85rem;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .photo-card .hover-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .photo-card:hover .hover-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .hover-overlay .btn-action {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: #fff;
+            color: #333;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, transform 0.15s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .hover-overlay .btn-action:hover {
+            background: #6a3093;
+            color: #fff;
+            transform: scale(1.1);
+        }
+        .hover-overlay .btn-action.btn-danger:hover {
+            background: #dc3545;
+        }
+
+        /* --- Context Menu --- */
+        .custom-context-menu {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            min-width: 160px;
+            overflow: hidden;
+        }
+        .custom-context-menu.show {
+            display: block;
+        }
+        .custom-context-menu button {
+            display: block;
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border: none;
+            background: transparent;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #333;
+            transition: background 0.15s;
+        }
+        .custom-context-menu button:hover {
+            background: #f0f0f0;
+        }
+        .custom-context-menu button i {
+            margin-right: 0.5rem;
+            width: 18px;
+            text-align: center;
+        }
+
+        /* --- Empty State --- */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #d0d0d0;
+        }
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+
+        /* --- Toast --- */
+        #toast-container {
+            position: fixed;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            max-width: 440px;
+            width: 92%;
+            pointer-events: none;
+        }
+        .toast-item {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 14px;
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+            animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toast-item.toast-exit { opacity: 0; transform: translateY(-10px) scale(0.95); }
+        .toast-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+        }
+        .toast-msg { flex: 1; font-size: 0.9rem; color: #1a1a2e; font-weight: 500; line-height: 1.4; }
+        .toast-bar {
+            position: absolute; bottom: 0; left: 0; height: 3px;
+            border-radius: 0 0 14px 14px; animation: toastProgress 3s linear forwards;
+        }
+        .toast-item.type-success .toast-icon { background: linear-gradient(135deg, #00c853, #69f0ae); color: #fff; }
+        .toast-item.type-success .toast-bar { background: linear-gradient(90deg, #00c853, #69f0ae); }
+        .toast-item.type-danger .toast-icon { background: linear-gradient(135deg, #ff1744, #ff8a80); color: #fff; }
+        .toast-item.type-danger .toast-bar { background: linear-gradient(90deg, #ff1744, #ff8a80); }
+        .toast-item.type-warning .toast-icon { background: linear-gradient(135deg, #ff9100, #ffab40); color: #fff; }
+        .toast-item.type-warning .toast-bar { background: linear-gradient(90deg, #ff9100, #ffab40); }
+        .toast-item.type-info .toast-icon { background: linear-gradient(135deg, #2979ff, #82b1ff); color: #fff; }
+        .toast-item.type-info .toast-bar { background: linear-gradient(90deg, #2979ff, #82b1ff); }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
+
+        /* --- Section Titles --- */
+        .section-title {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        .section-title i {
+            color: #6a3093;
+            margin-right: 0.5rem;
+        }
+
+        /* --- Footer --- */
+        .app-footer {
+            text-align: center;
+            padding: 1rem 0;
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: auto;
+        }
+        .app-footer a {
+            color: #999;
+            text-decoration: none;
+        }
+        .app-footer a:hover {
+            color: #6a3093;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 576px) {
+            .navbar-custom {
+                padding: 0.6rem 1rem;
+            }
+            .navbar-custom .navbar-brand {
+                font-size: 1.1rem;
+            }
+            .navbar-custom .btn-logout {
+                padding: 0.3rem 0.75rem;
+                font-size: 0.8rem;
+            }
+            .upload-area {
+                padding: 1.5rem 1rem;
+            }
+            .upload-area i {
+                font-size: 2.5rem;
+            }
+            .upload-area .btn-upload {
+                padding: 0.4rem 1rem;
+                font-size: 0.9rem;
+            }
+            .section-title {
+                font-size: 1rem;
+            }
+            .photo-card .photo-info {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.6rem;
+            }
+            .hover-overlay .btn-action {
+                width: 36px;
+                height: 36px;
+                font-size: 0.9rem;
+            }
+            .empty-state {
+                padding: 2rem 1rem;
+            }
+            .empty-state i {
+                font-size: 3rem;
+            }
+            .empty-state p {
+                font-size: 0.95rem;
+            }
+            .app-footer {
+                font-size: 0.7rem;
+                padding: 0.75rem 0;
+            }
+        }
+
+        /* 平板适配 */
+        @media (min-width: 577px) and (max-width: 991px) {
+            .upload-area {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar-custom d-flex justify-content-between align-items-center">
+    <div class="navbar-brand">
+        <i class="fas fa-cloud"></i>云相册
+    </div>
+    <a href="{% url 'logout' %}" class="btn-logout"><i class="fas fa-right-from-bracket me-1"></i>退出登录</a>
+</nav>
+
+<!-- Alert Container -->
+<div id="toast-container"></div>
+
+<!-- Main Content -->
+<div class="container py-4" style="max-width: 1200px;">
+    <!-- Upload Area -->
+    <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <i class="fas fa-cloud-arrow-up"></i>
+        <p>拖拽文件到此处，或点击选择文件</p>
+        <p style="font-size:0.8rem; color:#aaa; margin-top:0.3rem;">支持 JPG / JPEG / PNG / MP4 格式</p>
+        <button type="button" class="btn btn-upload" onclick="event.stopPropagation(); document.getElementById('fileInput').click();">
+            <i class="fas fa-plus me-1"></i>选择文件
+        </button>
+        <form id="uploadForm" enctype="multipart/form-data" style="display:none;">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="file" id="fileInput" name="file" multiple accept=".jpg,.jpeg,.png,.mp4">
+        </form>
+    </div>
+
+    <!-- All Photos Section -->
+    <h5 class="section-title"><i class="fas fa-images"></i>所有照片</h5>
+    {% if data %}
+    <div class="photo-grid">
+        {% for file in data %}
+        <div class="photo-card" data-photo-id="{{ file.id }}">
+            <img src="{{ file.url }}" alt="{{ file.name }}" onclick="Pic('{{ file.url }}')" loading="lazy">
+            <div class="hover-overlay">
+                <button class="btn-action" onclick="Pic('{{ file.url }}')" title="查看大图">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-action btn-danger" onclick="Delete('{{ file.id }}')" title="删除">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="photo-info">
+                <i class="fas fa-image me-1" style="color:#6a3093;"></i>{{ file.name }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-camera-retro"></i>
+        <p>暂无照片，快来上传第一张吧</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Photo Context Menu (right-click on photo) -->
+<div id="photoContextMenu" class="custom-context-menu">
+    <button onclick="Pic(currentPhotoUrl)"><i class="fas fa-eye"></i>查看大图</button>
+    <button onclick="Delete(currentPhotoId)"><i class="fas fa-trash"></i>删除</button>
+</div>
+
+<!-- Footer -->
+<footer class="app-footer">
+    <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank">京ICP备2022017561号-1</a>
+    &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010602104280" target="_blank">京公网安备 11010602104280号</a>
+</footer>
+
+<script src="/static/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Current photo context info
+    var currentPhotoId = null;
+    var currentPhotoUrl = null;
+
+    // --- Toast 消息提示 ---
+    function showMessage(type, message) {
+        var icons = {
+            info: 'fa-circle-info',
+            success: 'fa-check',
+            warning: 'fa-exclamation',
+            danger: 'fa-xmark'
+        };
+        var container = document.getElementById('toast-container');
+        var el = document.createElement('div');
+        el.className = 'toast-item type-' + (type || 'info');
+        el.innerHTML =
+            '<div class="toast-icon"><i class="fas ' + (icons[type] || icons.info) + '"></i></div>' +
+            '<span class="toast-msg">' + message + '</span>' +
+            '<div class="toast-bar"></div>';
+        container.appendChild(el);
+        setTimeout(function() {
+            el.classList.add('toast-exit');
+            setTimeout(function() { el.remove(); }, 300);
+        }, 3000);
+    }
+
+    // --- Upload ---
+    function Toupload(files) {
+        if (!files || files.length === 0) {
+            showMessage('warning', '请选择要上传的文件！');
+            return;
+        }
+        var allowedExt = ['jpg', 'jpeg', 'png', 'mp4'];
+        for (var i = 0; i < files.length; i++) {
+            var ext = files[i].name.split('.').pop().toLowerCase();
+            if (!allowedExt.includes(ext)) {
+                showMessage('danger', '文件 "' + files[i].name + '" 格式不支持');
+                return;
+            }
+        }
+        var formData = new FormData(document.getElementById('uploadForm'));
+        // Clear and re-add files
+        formData.delete('file');
+        for (var i = 0; i < files.length; i++) {
+            formData.append('file', files[i]);
+        }
+        $.ajax({
+            url: "{% url 'upload_file' %}",
+            method: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(data) {
+                showMessage('success', data.message || '上传成功');
+                setTimeout(function() { location.reload(); }, 800);
+            },
+            error: function(err) {
+                showMessage('danger', '上传失败，请重试');
+                console.error(err);
+            }
+        });
+    }
+
+    // File input change handler
+    document.getElementById('fileInput').addEventListener('change', function() {
+        if (this.files.length > 0) {
+            Toupload(this.files);
+        }
+    });
+
+    // --- Drag and Drop Upload ---
+    var dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-over');
+        var files = e.dataTransfer.files;
+        if (files.length > 0) {
+            // Set files to the hidden input
+            document.getElementById('fileInput').files = files;
+            Toupload(files);
+        }
+    });
+
+    // --- Delete photo ---
+    function Delete(file_id) {
+        if (!file_id) {
+            showMessage('warning', '未选择文件');
+            return;
+        }
+        if (!confirm('确认删除此照片吗？')) return;
+
+        $.ajax({
+            url: "{% url 'delete_file' %}",
+            type: "POST",
+            data: {
+                _method: "DELETE",
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                id: file_id
+            },
+            success: function(data) {
+                showMessage('success', data.message || '删除成功');
+                setTimeout(function() { location.reload(); }, 800);
+            },
+            error: function(err) {
+                showMessage('danger', '删除失败');
+                console.error(err);
+            }
+        });
+    }
+
+    // --- View photo ---
+    function Pic(file_url) {
+        window.open(file_url, '_blank');
+    }
+
+    // --- Context menu ---
+    var photoMenu = document.getElementById('photoContextMenu');
+
+    document.addEventListener('contextmenu', function(e) {
+        var target = e.target;
+        var photoCard = target.closest('.photo-card');
+        if (photoCard) {
+            e.preventDefault();
+            currentPhotoId = photoCard.getAttribute('data-photo-id');
+            currentPhotoUrl = photoCard.querySelector('img').getAttribute('src');
+            photoMenu.style.top = e.pageY + 'px';
+            photoMenu.style.left = e.pageX + 'px';
+            photoMenu.classList.add('show');
+        }
+    });
+
+    document.addEventListener('click', function() {
+        photoMenu.classList.remove('show');
+    });
+
+    // --- getCookie ---
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var c = cookies[i].trim();
+                if (c.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(c.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^GET|HEAD|OPTIONS|TRACE$/i.test(settings.type)) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+            }
+        }
+    });
+</script>
+</body>
+</html>

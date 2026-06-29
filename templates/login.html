@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的云端相册——登录</title>
+    <link href="/static/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/lib/font-awesome/css/all.min.css" rel="stylesheet">
+    <script src="/static/lib/jquery/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #6a3093 100%);
+            display: flex;
+            flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 440px;
+            padding: 2.5rem 2rem;
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #333;
+            font-weight: 700;
+        }
+        .login-card h2 i {
+            color: #6a3093;
+            margin-right: 0.5rem;
+        }
+        .form-floating {
+            margin-bottom: 1rem;
+        }
+        .form-control {
+            border-radius: 0.5rem;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .form-control:focus {
+            border-color: #6a3093;
+            box-shadow: 0 0 0 0.2rem rgba(106, 48, 147, 0.15);
+        }
+        .input-group .btn-outline-secondary {
+            border-radius: 0 0.5rem 0.5rem 0;
+            border: 2px solid #e0e0e0;
+            border-left: 0;
+            color: #6a3093;
+            font-weight: 600;
+            white-space: nowrap;
+            min-width: 90px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .input-group .btn-outline-secondary:hover {
+            background-color: #6a3093;
+            border-color: #6a3093;
+            color: #fff;
+        }
+        .input-group .btn-outline-secondary:disabled {
+            background-color: #f0f0f0;
+            color: #999;
+            border-color: #e0e0e0;
+        }
+        .btn-main {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1e3c72, #6a3093);
+            border: none;
+            color: #fff;
+            transition: opacity 0.3s, transform 0.15s;
+        }
+        .btn-main:hover {
+            opacity: 0.9;
+            color: #fff;
+        }
+        .btn-main:active {
+            transform: scale(0.98);
+        }
+        .link-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .link-row a {
+            color: #6a3093;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .link-row a:hover {
+            color: #1e3c72;
+            text-decoration: underline;
+        }
+        .panel {
+            display: none;
+        }
+        .panel.active {
+            display: block;
+        }
+        .app-footer {
+            text-align: center;
+            padding: 1rem 0;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .app-footer a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+        }
+        .app-footer a:hover {
+            color: #fff;
+        }
+        .logout-bar {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .logout-bar .btn-outline-light {
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            padding: 0.4rem 1.2rem;
+        }
+        .form-label-custom {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 0.3rem;
+            font-weight: 500;
+        }
+        .panel-title-icon {
+            display: block;
+            text-align: center;
+            font-size: 2.5rem;
+            color: #6a3093;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 密码框 + 眼睛图标 */
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper .form-control {
+            padding-right: 3rem;
+        }
+        .toggle-password-btn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            width: 42px;
+            height: 100%;
+            cursor: pointer;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: color 0.2s;
+            padding: 0;
+        }
+        .toggle-password-btn:hover {
+            color: #6a3093;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 576px) {
+            .login-wrapper {
+                padding: 1rem 0.75rem;
+                align-items: flex-start;
+                padding-top: 2rem;
+            }
+            .login-card {
+                padding: 1.5rem 1.25rem;
+                border-radius: 0.75rem;
+            }
+            .login-card h2 {
+                font-size: 1.3rem;
+                margin-bottom: 1rem;
+            }
+            .panel-title-icon {
+                font-size: 2rem;
+            }
+            .form-floating {
+                margin-bottom: 0.75rem;
+            }
+            .form-control {
+                font-size: 0.95rem;
+            }
+            .btn-main {
+                padding: 0.65rem;
+                font-size: 1rem;
+            }
+            .link-row {
+                font-size: 0.85rem;
+            }
+            .input-group .btn-outline-secondary {
+                min-width: 80px;
+                font-size: 0.85rem;
+                padding: 0.375rem 0.5rem;
+            }
+            .app-footer {
+                font-size: 0.7rem;
+                padding: 0.75rem 0;
+            }
+            #toast-container {
+                max-width: calc(100vw - 2rem) !important;
+                left: 1rem;
+                right: 1rem !important;
+            }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+<div class="login-wrapper">
+    <div class="login-card">
+        <!-- Panel 1: 密码登录 -->
+        <div id="login" class="panel active">
+            <i class="fas fa-shield-halved panel-title-icon"></i>
+            <h2>用户登录</h2>
+            <form id="login-form" method="post">
+                {% csrf_token %}
+                <label class="form-label-custom" for="login_phone"><i class="fas fa-mobile-screen-button me-1"></i>手机号</label>
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="login_phone" name="phone" placeholder="请输入手机号" autocomplete="off">
+                    <label for="login_phone">请输入手机号</label>
+                </div>
+                <label class="form-label-custom" for="passwd"><i class="fas fa-lock me-1"></i>密码</label>
+                <div class="password-wrapper mb-3">
+                    <div class="form-floating">
+                        <input type="password" class="form-control password-field" id="passwd" name="passwd" placeholder="请输入密码">
+                        <label for="passwd">请输入密码</label>
+                    </div>
+                    <button type="button" class="toggle-password-btn" data-target="passwd">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn btn-main" onclick="login('pass_login')">
+                    <i class="fas fa-right-to-bracket me-1"></i>登 录
+                </button>
+                <div class="link-row">
+                    <a onclick="to_reset()"><i class="fas fa-key me-1"></i>忘记密码</a>
+                    <a onclick="to_reg()"><i class="fas fa-comments me-1"></i>验证码登录</a>
+                </div>
+                <input type="reset" style="display:none;">
+            </form>
+        </div>
+
+        <!-- Panel 2: 验证码登录 -->
+        <div id="register" class="panel">
+            <i class="fas fa-paper-plane panel-title-icon"></i>
+            <h2>验证码登录</h2>
+            <form id="register-form" method="post">
+                {% csrf_token %}
+                <label class="form-label-custom" for="reg_phone"><i class="fas fa-mobile-screen-button me-1"></i>手机号</label>
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="reg_phone" name="phone" placeholder="请输入手机号" autocomplete="off">
+                    <label for="reg_phone">请输入手机号</label>
+                </div>
+                <label class="form-label-custom" for="reg_code"><i class="fas fa-shield-halved me-1"></i>验证码</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="reg_code" name="code" placeholder="请输入验证码">
+                    <button type="button" class="btn btn-outline-secondary" onclick="verification_code('register_reg')" id="register_reg">获取验证码</button>
+                </div>
+                <button type="button" class="btn btn-main" onclick="login('ver_login')">
+                    <i class="fas fa-right-to-bracket me-1"></i>登录 / 注册
+                </button>
+                <div class="link-row">
+                    <a onclick="to_login()"><i class="fas fa-arrow-left me-1"></i>密码登录</a>
+                </div>
+                <input type="reset" style="display:none;">
+            </form>
+        </div>
+
+        <!-- Panel 3: 设置密码（首次登录后） -->
+        <div id="set_pass_panel" class="panel">
+            <i class="fas fa-user-lock panel-title-icon"></i>
+            <h2>设置密码</h2>
+            <form id="set-form" method="post">
+                {% csrf_token %}
+                <label class="form-label-custom" for="set_pass"><i class="fas fa-lock me-1"></i>密码</label>
+                <div class="password-wrapper mb-3">
+                    <div class="form-floating">
+                        <input type="password" class="form-control password-field" id="set_pass" name="set_pass" placeholder="请输入密码">
+                        <label for="set_pass">请输入密码（至少6位）</label>
+                    </div>
+                    <button type="button" class="toggle-password-btn" data-target="set_pass">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+                <label class="form-label-custom" for="set_pass_req"><i class="fas fa-lock me-1"></i>确认密码</label>
+                <div class="password-wrapper mb-3">
+                    <div class="form-floating">
+                        <input type="password" class="form-control password-field" id="set_pass_req" name="set_pass_req" placeholder="请确认密码">
+                        <label for="set_pass_req">请再次输入密码</label>
+                    </div>
+                    <button type="button" class="toggle-password-btn" data-target="set_pass_req">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn btn-main" onclick="set_password()">
+                    <i class="fas fa-check me-1"></i>确认设置
+                </button>
+                <div class="link-row">
+                    <a onclick="to_index()"><i class="fas fa-arrow-right me-1"></i>暂不设置</a>
+                </div>
+                <input type="reset" style="display:none;">
+            </form>
+        </div>
+
+        <!-- Panel 4: 重置密码 -->
+        <div id="reset" class="panel">
+            <i class="fas fa-rotate-left panel-title-icon"></i>
+            <h2>重置密码</h2>
+            <form id="reset-form" method="post">
+                {% csrf_token %}
+                <label class="form-label-custom" for="reset_phone"><i class="fas fa-mobile-screen-button me-1"></i>手机号</label>
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="reset_phone" name="phone" placeholder="请输入手机号" autocomplete="off">
+                    <label for="reset_phone">请输入手机号</label>
+                </div>
+                <label class="form-label-custom" for="reset_code"><i class="fas fa-shield-halved me-1"></i>验证码</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="reset_code" name="code" placeholder="请输入验证码">
+                    <button type="button" class="btn btn-outline-secondary" onclick="verification_code('reset_reg')" id="reset_reg">获取验证码</button>
+                </div>
+                <label class="form-label-custom" for="reset_passwd"><i class="fas fa-key me-1"></i>新密码</label>
+                <div class="password-wrapper mb-3">
+                    <div class="form-floating">
+                        <input type="password" class="form-control password-field" id="reset_passwd" name="passwd" placeholder="请输入新密码">
+                        <label for="reset_passwd">请输入新密码（至少6位）</label>
+                    </div>
+                    <button type="button" class="toggle-password-btn" data-target="reset_passwd">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+                <label class="form-label-custom" for="reset_req_passwd"><i class="fas fa-lock me-1"></i>确认密码</label>
+                <div class="password-wrapper mb-3">
+                    <div class="form-floating">
+                        <input type="password" class="form-control password-field" id="reset_req_passwd" name="req_passwd" placeholder="请确认密码">
+                        <label for="reset_req_passwd">请再次输入新密码</label>
+                    </div>
+                    <button type="button" class="toggle-password-btn" data-target="reset_req_passwd">
+                        <i class="far fa-eye"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn btn-main" onclick="reset_passwd()">
+                    <i class="fas fa-check me-1"></i>重置密码
+                </button>
+                <div class="link-row">
+                    <a onclick="to_login()"><i class="fas fa-arrow-left me-1"></i>返回登录</a>
+                </div>
+                <input type="reset" style="display:none;">
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer class="app-footer">
+    <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank">京ICP备2022017561号-1</a>
+    &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010602104280" target="_blank">京公网安备 11010602104280号</a>
+</footer>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<style>
+    #toast-container {
+        position: fixed;
+        top: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        max-width: 440px;
+        width: 92%;
+        pointer-events: none;
+    }
+    .toast-item {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+        animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        overflow: hidden;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .toast-item.toast-exit {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    .toast-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .toast-msg {
+        flex: 1;
+        font-size: 0.9rem;
+        color: #1a1a2e;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+    .toast-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        border-radius: 0 0 14px 14px;
+        animation: toastProgress 3s linear forwards;
+    }
+    .toast-item.type-success .toast-icon { background: linear-gradient(135deg, #00c853, #69f0ae); color: #fff; }
+    .toast-item.type-success .toast-bar { background: linear-gradient(90deg, #00c853, #69f0ae); }
+    .toast-item.type-danger .toast-icon { background: linear-gradient(135deg, #ff1744, #ff8a80); color: #fff; }
+    .toast-item.type-danger .toast-bar { background: linear-gradient(90deg, #ff1744, #ff8a80); }
+    .toast-item.type-warning .toast-icon { background: linear-gradient(135deg, #ff9100, #ffab40); color: #fff; }
+    .toast-item.type-warning .toast-bar { background: linear-gradient(90deg, #ff9100, #ffab40); }
+    .toast-item.type-info .toast-icon { background: linear-gradient(135deg, #2979ff, #82b1ff); color: #fff; }
+    .toast-item.type-info .toast-bar { background: linear-gradient(90deg, #2979ff, #82b1ff); }
+
+    @keyframes toastSlideIn {
+        from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastProgress {
+        from { width: 100%; }
+        to { width: 0%; }
+    }
+</style>
+
+<script>
+    // 密码显示/隐藏切换
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.toggle-password-btn');
+        if (!btn) return;
+        var targetId = btn.getAttribute('data-target');
+        var input = document.getElementById(targetId);
+        var icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'far fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'far fa-eye';
+        }
+    });
+
+    function showToast(message, type) {
+        type = type || 'info';
+        var icons = {
+            info: 'fa-circle-info',
+            success: 'fa-check',
+            warning: 'fa-exclamation',
+            danger: 'fa-xmark'
+        };
+        var container = document.getElementById('toast-container');
+        var el = document.createElement('div');
+        el.className = 'toast-item type-' + type;
+        el.innerHTML =
+            '<div class="toast-icon"><i class="fas ' + (icons[type] || icons.info) + '"></i></div>' +
+            '<span class="toast-msg">' + message + '</span>' +
+            '<div class="toast-bar"></div>';
+        container.appendChild(el);
+        setTimeout(function() {
+            el.classList.add('toast-exit');
+            setTimeout(function() { el.remove(); }, 300);
+        }, 3000);
+    }
+
+    // 面板切换函数 - 隐藏所有面板再显示目标
+    var _loginPhone = ''; // 保存登录时的手机号
+    function hideAll() {
+        $("input[type=reset]").trigger("click");
+        document.getElementById("login").style.display = "none";
+        document.getElementById("register").style.display = "none";
+        document.getElementById("set_pass_panel").style.display = "none";
+        document.getElementById("reset").style.display = "none";
+    }
+
+    function to_reg() {
+        hideAll();
+        document.getElementById("register").style.display = "block";
+    }
+
+    function to_login() {
+        hideAll();
+        document.getElementById("login").style.display = "block";
+    }
+
+    function to_reset() {
+        hideAll();
+        document.getElementById("reset").style.display = "block";
+    }
+
+    function to_setpass() {
+        hideAll();
+        document.getElementById("set_pass_panel").style.display = "block";
+    }
+
+    function to_index() {
+        showToast("首次登录若不设置密码则下次登录仍需验证码登录", "warning");
+        window.location.href = "{% url 'index' %}";
+    }
+
+    // 手机号格式验证
+    function isValidPhone(phone) {
+        return /^1[3-9][0-9]{9}$/.test(phone);
+    }
+
+    // 获取 ?next= 参数，登录后跳回
+    function getNextUrl() {
+        var m = location.search.match(/next=([^&]+)/);
+        return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    // 登录函数
+    function login(category) {
+        if (category !== "pass_login" && category !== "ver_login") {
+            console.log("login(category)-->category=", category);
+            return showToast("登录出错，请稍后重试", "danger");
+        }
+
+        if (category === "pass_login") {
+            var phone = document.getElementById("login_phone").value.trim();
+            var passwd = document.getElementById("passwd").value;
+            if (phone === "" || passwd === "") {
+                return showToast("请确保手机号和密码填写完整！", "warning");
+            }
+            if (!isValidPhone(phone)) {
+                return showToast("请输入正确的手机号！", "warning");
+            }
+            if (passwd.length < 6) {
+                return showToast("密码长度不能少于6位！", "warning");
+            }
+            $.ajax({
+                url: "{% url 'login' %}",
+                method: "post",
+                data: {
+                    csrfmiddlewaretoken: getCookie('csrftoken'),
+                    category: "pass_login",
+                    phone: phone,
+                    passwd: passwd
+                },
+                success: function(data) {
+                    if (data.status === 0) {
+                        showToast(data.message, "success");
+                        setTimeout(function() {
+                            var next = getNextUrl();
+                            window.location.href = next || "{% url 'index' %}";
+                        }, 500);
+                    } else {
+                        showToast(data.message, "danger");
+                    }
+                },
+                error: function(error) {
+                    showToast("登录错误，请重试！", "danger");
+                    console.log(error);
+                }
+            });
+        } else if (category === "ver_login") {
+            var reg_phone = document.getElementById("reg_phone").value.trim();
+            var code = document.getElementById("reg_code").value.trim();
+            if (reg_phone === "") {
+                return showToast("请确保手机号填写完整！", "warning");
+            }
+            if (!isValidPhone(reg_phone)) {
+                return showToast("请输入正确的手机号！", "warning");
+            }
+            if (code === "") {
+                return showToast("请输入验证码", "warning");
+            }
+            $.ajax({
+                url: "{% url 'login' %}",
+                method: "post",
+                data: {
+                    csrfmiddlewaretoken: getCookie('csrftoken'),
+                    category: "ver_phone",
+                    phone: reg_phone,
+                    code: code
+                },
+                success: function(data) {
+                    if (data.status === 0) {
+                        _loginPhone = reg_phone;
+                        showToast(data.message, "success");
+                        to_setpass();
+                    } else {
+                        showToast(data.message, "danger");
+                    }
+                },
+                error: function(error) {
+                    showToast("登录错误，请重试！", "danger");
+                    console.log(error);
+                }
+            });
+        }
+    }
+
+    // 首次登录设置密码函数
+    function set_password() {
+        var passwd = document.getElementById("set_pass").value;
+        var passwd_req = document.getElementById("set_pass_req").value;
+        var phone = _loginPhone || document.getElementById("reg_phone").value.trim();
+        if (passwd === "" || passwd_req === "") {
+            return showToast("请填写完整！", "warning");
+        }
+        if (passwd.length < 6) {
+            return showToast("密码长度不能少于6位！", "warning");
+        }
+        if (passwd !== passwd_req) {
+            return showToast("两次密码不一致！", "warning");
+        }
+        $.ajax({
+            url: "{% url 'set_pass' %}",
+            method: "post",
+            data: {
+                category: "set_pass",
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                passwd: passwd,
+                phone: phone
+            },
+            success: function(data) {
+                if (data.status === 0) {
+                    showToast(data.message, "success");
+                    to_index();
+                } else {
+                    showToast(data.message, "danger");
+                }
+            },
+            error: function(err) {
+                showToast("设置失败，请重试", "danger");
+                console.log(err);
+            }
+        });
+    }
+
+    // 重置密码函数
+    function reset_passwd() {
+        var phone = document.getElementById("reset_phone").value.trim();
+        var code = document.getElementById("reset_code").value.trim();
+        var passwd = document.getElementById("reset_passwd").value;
+        var passwd_req = document.getElementById("reset_req_passwd").value;
+        if (phone === "" || code === "" || passwd === "" || passwd_req === "") {
+            return showToast("请填写完整！", "warning");
+        }
+        if (!isValidPhone(phone)) {
+            return showToast("请输入正确的手机号！", "warning");
+        }
+        if (passwd.length < 6) {
+            return showToast("密码长度不能少于6位！", "warning");
+        }
+        if (passwd !== passwd_req) {
+            return showToast("两次密码不一致！", "warning");
+        }
+        $.ajax({
+            url: "{% url 'reset_password' %}",
+            method: "post",
+            data: {
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                category: "reset_password",
+                phone: phone,
+                code: code,
+                passwd: passwd
+            },
+            success: function(data) {
+                if (data.status === 0) {
+                    showToast(data.message, "success");
+                    to_login();
+                } else {
+                    showToast(data.message, "danger");
+                }
+            },
+            error: function(err) {
+                showToast("重置失败，请重试", "danger");
+                console.log(err);
+            }
+        });
+    }
+
+    // 倒计时函数
+    function set_time(id_tag) {
+        var btn = document.getElementById(id_tag);
+        var time = 59;
+        btn.disabled = true;
+        var timer = setInterval(function() {
+            if (time === 0) {
+                clearInterval(timer);
+                btn.disabled = false;
+                btn.innerText = "获取验证码";
+                time = 59;
+            } else {
+                btn.innerText = time + "s";
+                time--;
+            }
+        }, 1000);
+    }
+
+    // 发送验证码函数（POST请求）
+    function verification_code(category) {
+        var phone;
+        if (category === "register_reg") {
+            phone = document.getElementById("reg_phone").value.trim();
+        } else if (category === "reset_reg") {
+            phone = document.getElementById("reset_phone").value.trim();
+        }
+
+        if (phone === "") {
+            return showToast("请确保手机号填写完整！", "warning");
+        }
+        if (!isValidPhone(phone)) {
+            return showToast("请输入正确的手机号！", "warning");
+        }
+
+        set_time(category);
+
+        $.ajax({
+            url: "{% url 'send' %}",
+            method: "POST",
+            data: {
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                phone: phone
+            },
+            success: function(data) {
+                showToast(data.message, data.status === 0 ? "success" : "danger");
+                console.log(data);
+            },
+            error: function(err) {
+                showToast("请求失败，请稍后重试", "danger");
+                console.log(err);
+            }
+        });
+    }
+</script>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            for (const cookie of document.cookie.split(';')) {
+                const c = cookie.trim();
+                if (c.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(c.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^GET|HEAD|OPTIONS|TRACE$/i.test(settings.type)) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+            }
+        }
+    });
+</script>
+</body>
+</html>
