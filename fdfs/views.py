@@ -5,8 +5,12 @@ import random
 
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
+import logging
+
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
+
+logger = logging.getLogger('fdfs')
 from django.views.generic.base import View
 
 from utils import redis
@@ -88,7 +92,7 @@ def send_verification_code(request):
 
     if settings.DEBUG:
         redis.set_code_phone(phone, code)
-        print("[DEBUG] 验证码发送 - 手机号: %s, 验证码: %s" % (phone, code))
+        logger.info("验证码发送 - 手机号: %s, 验证码: %s" % (phone, code))
         return JsonResponse(data={"status": Status.success.value, 'message': "短信发送成功，请注意查收！"})
     else:
         result = yunpian.send_sms(phone)
