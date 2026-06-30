@@ -279,52 +279,61 @@ def delete(request):
 
 @login_require
 def recycle_bin(request):
-    """回收站 — 查看已删除文件和文件夹"""
+    """回收站 — 按目录浏览已删除内容"""
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
     from datetime import datetime, timedelta
     now = datetime.now()
-    files = File.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
-    all_deleted_folders = Folder.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
     
-    # 构建文件夹树：只展示顶层文件夹，子文件夹作为 children
-    folder_map = {f.id: f for f in all_deleted_folders}
-    root_folders = []
-    for f in all_deleted_folders:
-        f.children = []
-        f.depth = 0
-        f.days_left = 30
-        if f.deleted_at:
-            f.days_left = max(30 - (datetime.now() - f.deleted_at.replace(tzinfo=None)).days, 0)
-        f.item_type = 'folder'
-        if f.parent_id and f.parent_id in folder_map:
-            parent = folder_map[f.parent_id]
-            f.depth = parent.depth + 1
-            parent.children.append(f)
-        else:
-            root_folders.append(f)
+    # 当前浏览的已删除文件夹（0=根）
+    folder_id = request.GET.get("folder_id", "0").strip()
+    current_folder = None
     
-    # 扁平化树结构，带深度信息
-    flat_folders = []
-    def flatten(node_list, depth):
-        for node in node_list:
-            node.depth = depth
-            node.indent = depth * 30  # px 缩进
-            flat_folders.append(node)
-            if hasattr(node, 'children') and node.children:
-                flatten(node.children, depth + 1)
-    flatten(root_folders, 0)
+    if folder_id != "0":
+        try:
+            current_folder = Folder.objects.get(id=int(folder_id), user_id=user_id, is_deleted=True)
+            sub_folders = Folder.objects.filter(user_id=user_id, parent=current_folder, is_deleted=True)
+            files = File.objects.filter(user_id=user_id, folder=current_folder, is_deleted=True)
+        except Folder.DoesNotExist:
+            sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=True)
+            files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=True)
+            folder_id = "0"
+            current_folder = None
+    else:
+        sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=True)
+        files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=True)
     
+    # 面包屑
+    breadcrumbs = [{'id': 0, 'name': '回收站'}]
+    if current_folder:
+        ancestors = []
+        f = current_folder
+        while f:
+            ancestors.insert(0, f)
+            f = f.parent
+        for a in ancestors:
+            breadcrumbs.append({'id': a.id, 'name': a.name})
+    
+    # 计算剩余天数
     for f in files:
         f.url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
             f.file_id.split('/M00/')[1])
+        f.days_left = 30
         if f.deleted_at:
-            days_left = 30 - (now - f.deleted_at.replace(tzinfo=None)).days
-            f.days_left = max(days_left, 0)
-        else:
-            f.days_left = 30
-        f.item_type = 'file'
-    return render(request, 'recycle_bin.html', {'files': files, 'folders': root_folders, 'request': request})
+            f.days_left = max(30 - (now - f.deleted_at.replace(tzinfo=None)).days, 0)
+    
+    for f in sub_folders:
+        f.days_left = 30
+        if f.deleted_at:
+            f.days_left = max(30 - (now - f.deleted_at.replace(tzinfo=None)).days, 0)
+    
+    return render(request, 'recycle_bin.html', {
+        'files': files,
+        'folders': sub_folders,
+        'breadcrumbs': breadcrumbs,
+        'current_folder': current_folder,
+        'request': request,
+    })
 
 
 @login_require
