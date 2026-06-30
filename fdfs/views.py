@@ -308,8 +308,8 @@ def recycle_bin(request):
     flat_folders = []
     def flatten(node_list, depth):
         for node in node_list:
-            node._depth = depth
-            node._indent = depth * 30  # px 缩进
+            node.depth = depth
+            node.indent = depth * 30  # px 缩进
             flat_folders.append(node)
             if hasattr(node, 'children') and node.children:
                 flatten(node.children, depth + 1)
