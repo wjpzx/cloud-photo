@@ -39,7 +39,7 @@ class LoginView(View):
                 else:
                     session_id = redis.set_session_id(phone, user.id)
                     response = JsonResponse(data={'status': Status.success.value, 'message': "登录成功"})
-                    response.set_cookie("session_id", session_id)
+                    response.set_cookie("session_id", session_id, max_age=3600)
                     return response
 
             except User.DoesNotExist:
@@ -62,7 +62,7 @@ class LoginView(View):
                     user.save()
                 session_id = redis.set_session_id(phone, user.id)
                 response = JsonResponse(data={'status': Status.success.value, 'message': "登录成功"})
-                response.set_cookie("session_id", session_id)
+                response.set_cookie("session_id", session_id, max_age=3600)
                 return response
             else:
                 return JsonResponse(data={'status': Status.error.value, "message": "验证码错误，请稍后重试"})

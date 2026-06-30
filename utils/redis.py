@@ -21,9 +21,9 @@ def set_session_id(phone, user_id):
     md5.update(string)
     session_id = md5.hexdigest()
     redis = get_redis_connection("session")
-    redis.set("session_by_%s" % session_id, phone)
-    redis.set("session_by_%s" % phone, session_id)
-    redis.set("session_by_user_id_%s" % session_id, user_id)
+    redis.set("session_by_%s" % session_id, phone, ex=3600)
+    redis.set("session_by_%s" % phone, session_id, ex=3600)
+    redis.set("session_by_user_id_%s" % session_id, user_id, ex=3600)
 
     return session_id
 
