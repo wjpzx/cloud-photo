@@ -14,6 +14,22 @@ from django.views.decorators.http import require_http_methods
 logger = logging.getLogger('fdfs')
 from django.views.generic.base import View
 
+# 全角→半角字符归一化
+def _normalize(s):
+    """全角数字/字母/符号转半角"""
+    if not s:
+        return s
+    result = []
+    for c in s:
+        code = ord(c)
+        if 0xFF01 <= code <= 0xFF5E:
+            result.append(chr(code - 0xFEE0))
+        elif code == 0x3000:  # 全角空格
+            result.append(' ')
+        else:
+            result.append(c)
+    return ''.join(result)
+
 from utils import redis
 from utils.fdfs import fastdfs_server
 from fdfs.models import File, User, Status, Folder, Share
@@ -29,7 +45,7 @@ class LoginView(View):
 
     def post(self, request):
         category = request.POST.get("category")
-        phone = request.POST.get("phone")
+        phone = _normalize((request.POST.get("phone") or "").strip())
         if category == "pass_login":
             passwd = request.POST.get("passwd")
             try:
@@ -73,7 +89,7 @@ class LoginView(View):
 
 @require_http_methods(["POST"])
 def send_verification_code(request):
-    phone = request.POST.get("phone")
+    phone = _normalize(request.POST.get("phone", ""))
     if not phone:
         return JsonResponse(data={"status": Status.error.value, 'message': "请输入手机号"})
 
@@ -106,8 +122,7 @@ def send_verification_code(request):
 def set_pass(request):
     category = request.POST.get("category")
     if category == "set_pass":
-        # 进入设置密码范围
-        phone = request.POST.get("phone")
+        phone = _normalize((request.POST.get("phone") or "").strip())
         passwd = request.POST.get("passwd")
         try:
             user = User.objects.get(phone=phone)
@@ -120,7 +135,7 @@ def set_pass(request):
 
 @require_http_methods(["POST"])
 def reset_password(request):
-    phone = request.POST.get("phone")
+    phone = _normalize((request.POST.get("phone") or "").strip())
     code = request.POST.get("code")
     passwd = request.POST.get("passwd")
 
@@ -352,7 +367,7 @@ def create_folder(request):
     """新建文件夹"""
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
-    name = request.POST.get("name", "").strip()
+    name = _normalize(request.POST.get("name", "").strip())
     parent_id = request.POST.get("parent_id", "").strip()
     if not name:
         return JsonResponse(data={"status": Status.error.value, "message": "请输入文件夹名称"})
@@ -370,7 +385,7 @@ def create_folder(request):
 def rename_folder(request):
     """重命名文件夹"""
     folder_id = int(request.POST.get("id"))
-    name = request.POST.get("name", "").strip()
+    name = _normalize(request.POST.get("name", "").strip())
     if not name:
         return JsonResponse(data={"status": Status.error.value, "message": "名称不能为空"})
     try:
@@ -477,7 +492,7 @@ def create_share(request):
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
     file_id = int(request.POST.get("file_id"))
-    password = request.POST.get("password", "").strip()
+    password = _normalize(request.POST.get("password", "").strip())
     expire_hours = int(request.POST.get("expire_hours", "24"))
     try:
         f = File.objects.get(id=file_id, user_id=user_id, is_deleted=False)
@@ -520,7 +535,7 @@ def share_page(request, code):
 def verify_share(request):
     """验证分享密码"""
     code = request.POST.get("code")
-    password = request.POST.get("password", "").strip()
+    password = _normalize(request.POST.get("password", "").strip())
     try:
         share = Share.objects.get(code=code)
     except Share.DoesNotExist:
