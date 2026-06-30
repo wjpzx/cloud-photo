@@ -342,6 +342,50 @@ def permanent_delete(request):
 
 
 @login_require
+def get_folder_contents(request):
+    """AJAX 获取文件夹内容（子文件夹+文件）"""
+    session_id = request.COOKIES.get("session_id")
+    user_id = get_user_id_by_session_id(session_id)
+    folder_id = request.GET.get("folder_id", "0").strip()
+    if folder_id != "0":
+        try:
+            folder = Folder.objects.get(id=int(folder_id), user_id=user_id, is_deleted=False)
+        except Folder.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
+        sub_folders = Folder.objects.filter(user_id=user_id, parent=folder, is_deleted=False)
+        files = File.objects.filter(user_id=user_id, folder=folder, is_deleted=False)
+    else:
+        folder = None
+        sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=False)
+        files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=False)
+    
+    folders_data = [{'id': f.id, 'name': f.name} for f in sub_folders]
+    files_data = []
+    for f in files:
+        url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
+            f.file_id.split('/M00/')[1])
+        files_data.append({'id': f.id, 'name': f.name, 'url': url, 'size': f.size})
+    
+    # 面包屑
+    breadcrumbs = [{'id': 0, 'name': '根目录'}]
+    if folder:
+        ancestors = []
+        f = folder
+        while f:
+            ancestors.insert(0, {'id': f.id, 'name': f.name})
+            f = f.parent
+        breadcrumbs.extend(ancestors)
+    
+    return JsonResponse(data={
+        "status": Status.success.value,
+        "folder_id": folder_id,
+        "folders": folders_data,
+        "files": files_data,
+        "breadcrumbs": breadcrumbs,
+    })
+
+
+@login_require
 def move_pic(request):
     if request.method == "POST":
         photo_id = request.POST.get("photo_id")

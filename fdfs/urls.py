@@ -19,6 +19,7 @@ urlpatterns = [
     re_path(r'^folder/permanent_delete/', permanent_delete_folder, name='permanent_delete_folder'),
     # 文件移动
     re_path(r'^move_file/', move_file, name='move_file'),
+    re_path(r'^folder_contents/', get_folder_contents, name='get_folder_contents'),
     # 分享
     re_path(r'^share/create/', create_share, name='create_share'),
     re_path(r'^share/verify/', verify_share, name='verify_share'),

@@ -599,10 +599,10 @@
                     <i class="fas fa-folder-plus"></i> 新建文件夹
                 </button>
                 {% if current_folder %}
-                <button class="btn btn-sm btn-outline-warning me-1" onclick="renameCurrentFolder()">
+                <button class="btn btn-sm btn-outline-warning me-1 folder-actions-only" onclick="renameCurrentFolder()">
                     <i class="fas fa-pen"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentFolder()">
+                <button class="btn btn-sm btn-outline-danger folder-actions-only" onclick="deleteCurrentFolder()">
                     <i class="fas fa-trash"></i>
                 </button>
                 {% endif %}
@@ -874,7 +874,7 @@
         if (!name) return showMessage('warning', '请输入文件夹名称');
         $.post('/fdfs/folder/create/', {
             name: name,
-            parent_id: '{{ folder_id }}' || '0'
+            parent_id: currentFolderId
         }, function(res) {
             if (res.status === 0) {
                 showMessage('success', '文件夹已创建');
@@ -888,12 +888,14 @@
 
     var renameTargetId = null;
     function renameCurrentFolder() {
-        {% if current_folder %}
-        renameTargetId = {{ current_folder.id }};
-        $('#renameFolderName').val('{{ current_folder.name|escapejs }}');
+        if (currentFolderId === '0') return;
+        renameTargetId = currentFolderId;
+        // Get current folder name from breadcrumb
+        var lastName = document.querySelector('.breadcrumb-item.current span');
+        var name = lastName ? lastName.textContent : '';
+        $('#renameFolderName').val(name);
         $('#folderRenameModal').show();
         $('#renameFolderName').focus().select();
-        {% endif %}
     }
     function closeFolderRenameModal() {
         $('#folderRenameModal').hide();
@@ -914,9 +916,9 @@
     }
 
     function deleteCurrentFolder() {
-        {% if current_folder %}
+        if (currentFolderId === '0') return;
         customConfirm('删除文件夹？', '文件夹内所有文件和子文件夹将移入回收站', function() {
-            $.post('/fdfs/folder/delete/', {id: {{ current_folder.id }}}, function(res) {
+            $.post('/fdfs/folder/delete/', {id: currentFolderId}, function(res) {
                 if (res.status === 0) {
                     showMessage('success', '已移入回收站');
                     setTimeout(function() { location.href = '?folder_id=0'; }, 500);
@@ -925,7 +927,6 @@
                 }
             }).fail(function() { showMessage('danger', '操作失败'); });
         });
-        {% endif %}
     }
 
     // --- Folder Context Menu ---
@@ -1044,7 +1045,8 @@
         dragFileId = null;
     }
 
-    // 文件夹悬停延时：先移动文件，再进入文件夹
+    // 文件夹悬停延时：AJAX 无刷新加载子文件夹，保持拖拽状态
+    var currentFolderId = '{{ folder_id }}';
     function setupFolderHoverTimers() {
         document.querySelectorAll('.folder-card').forEach(function(card) {
             card.addEventListener('dragover', function(e) {
@@ -1054,17 +1056,95 @@
                 if (!fid || !dragFileId) return;
                 clearTimeout(navigateTimer);
                 navigateTimer = setTimeout(function() {
-                    // 先移动文件到目标文件夹
-                    $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: fid}, function(res) {
-                        dragFileId = null;
-                        location.href = '?folder_id=' + fid;
-                    }).fail(function() {
-                        dragFileId = null;
-                        location.href = '?folder_id=' + fid;
-                    });
+                    loadFolderContents(fid);
                 }, NAVIGATE_DELAY);
             });
         });
+    }
+
+    function loadFolderContents(folderId) {
+        $.get('/fdfs/folder_contents/', {folder_id: folderId}, function(res) {
+            if (res.status !== 0) return;
+            currentFolderId = folderId;
+            // 切换文件夹操作按钮
+            var inFolder = (folderId !== '0');
+            document.querySelectorAll('.folder-actions-only').forEach(function(el) {
+                el.style.display = inFolder ? '' : 'none';
+            });
+            // 更新面包屑
+            updateBreadcrumb(res.breadcrumbs);
+            // 更新文件夹网格
+            renderFolderGrid(res.folders, res.files);
+            // 重新绑定事件
+            setupFolderHoverTimers();
+            // 更新上传目标
+            $('#uploadFolderId').val(folderId);
+        });
+    }
+
+    function updateBreadcrumb(breadcrumbs) {
+        var html = '';
+        for (var i = 0; i < breadcrumbs.length; i++) {
+            var bc = breadcrumbs[i];
+            var isLast = (i === breadcrumbs.length - 1);
+            if (isLast) {
+                html += '<span class=\"breadcrumb-item current\" data-folder-id=\"' + bc.id + '\"><span>' + escapeHtml(bc.name) + '</span></span>';
+            } else {
+                html += '<span class=\"breadcrumb-item\" data-folder-id=\"' + bc.id + '\"'
+                    + ' ondragover=\"breadcrumbDragOver(event, ' + bc.id + ')\" ondragleave=\"folderDragLeave(event)\"'
+                    + ' ondrop=\"breadcrumbDrop(event, ' + bc.id + ')\">'
+                    + '<a href=\"?folder_id=' + bc.id + '\">' + escapeHtml(bc.name) + '</a></span>';
+            }
+        }
+        html += '<small class=\"text-muted ms-2 drop-hint\">拖文件到路径上可跳转</small>';
+        document.querySelector('.breadcrumb-path').innerHTML = html;
+    }
+
+    function renderFolderGrid(folders, files) {
+        var gridHtml = '';
+        if (folders.length > 0) {
+            gridHtml += '<div class=\"folder-grid mb-3\">';
+            folders.forEach(function(f) {
+                gridHtml += '<div class=\"folder-card\" data-folder-id=\"' + f.id + '\"'
+                    + ' ondragover=\"folderDragOver(event)\" ondragleave=\"folderDragLeave(event)\"'
+                    + ' ondrop=\"folderDrop(event, ' + f.id + ')\"'
+                    + ' oncontextmenu=\"folderContextMenu(event, ' + f.id + ', \'' + escapeHtml(f.name) + '\')\"'
+                    + ' onclick=\"location.href=\'?folder_id=' + f.id + '\'\">'
+                    + '<div class=\"folder-icon\"><i class=\"fas fa-folder\"></i></div>'
+                    + '<div class=\"folder-name\">' + escapeHtml(f.name) + '</div>'
+                    + '</div>';
+            });
+            gridHtml += '</div>';
+        }
+        gridHtml += '<h6 class=\"section-title\"><i class=\"fas fa-images\"></i>所有照片</h6>';
+        if (files.length > 0) {
+            gridHtml += '<div class=\"photo-grid\">';
+            files.forEach(function(f) {
+                gridHtml += '<div class=\"photo-card\" data-photo-id=\"' + f.id + '\" draggable=\"true\" ondragstart=\"dragStart(event, ' + f.id + ')\">'
+                    + '<img src=\"' + f.url + '\" alt=\"' + escapeHtml(f.name) + '\" onclick=\"Pic(\'' + f.url + '\')\" loading=\"lazy\">'
+                    + '<div class=\"hover-overlay\">'
+                    + '<button class=\"btn-action\" onclick=\"Pic(\'' + f.url + '\')\" title=\"查看大图\"><i class=\"fas fa-eye\"></i></button>'
+                    + '<button class=\"btn-action\" onclick=\"shareFile(' + f.id + ')\" title=\"分享\"><i class=\"fas fa-share-nodes\"></i></button>'
+                    + '<button class=\"btn-action btn-danger\" onclick=\"Delete(' + f.id + ')\" title=\"删除\"><i class=\"fas fa-trash\"></i></button>'
+                    + '</div>'
+                    + '<div class=\"photo-info\"><i class=\"fas fa-image me-1\" style=\"color:#6a3093;\"></i>' + escapeHtml(f.name) + '</div>'
+                    + '</div>';
+            });
+            gridHtml += '</div>';
+        } else {
+            gridHtml += '<div class=\"empty-state\"><i class=\"fas fa-camera-retro\"></i><p>此文件夹为空</p></div>';
+        }
+        // 替换网格区域
+        var container = document.querySelector('.photo-grid');
+        if (container) {
+            container.parentNode.innerHTML = gridHtml;
+        }
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
     // 初始化
     setupFolderHoverTimers();
