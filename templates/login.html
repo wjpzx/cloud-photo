@@ -245,7 +245,7 @@
 <div class="login-wrapper">
     <div class="login-card">
         <!-- Panel 1: 密码登录 -->
-        <div id="login" class="panel active">
+        <div id="login_panel" class="panel active">
             <i class="fas fa-shield-halved panel-title-icon"></i>
             <h2>用户登录</h2>
             <form id="login-form" method="post">
@@ -357,10 +357,10 @@
                 <label class="form-label-custom" for="reset_passwd"><i class="fas fa-key me-1"></i>新密码</label>
                 <div class="password-wrapper mb-3">
                     <div class="form-floating">
-                        <input type="password" class="form-control password-field" id="reset_passwd" name="passwd" placeholder="请输入新密码">
-                        <label for="reset_passwd">请输入新密码（至少6位）</label>
+                        <input type="password" class="form-control password-field" id="reset_password" name="passwd" placeholder="请输入新密码">
+                        <label for="reset_password">请输入新密码（至少6位）</label>
                     </div>
-                    <button type="button" class="toggle-password-btn" data-target="reset_passwd">
+                    <button type="button" class="toggle-password-btn" data-target="reset_password">
                         <i class="far fa-eye"></i>
                     </button>
                 </div>
@@ -519,7 +519,7 @@
     var _loginPhone = ''; // 保存登录时的手机号
     function hideAll() {
         $("input[type=reset]").trigger("click");
-        document.getElementById("login").style.display = "none";
+        document.getElementById("login_panel").style.display = "none";
         document.getElementById("register").style.display = "none";
         document.getElementById("set_pass_panel").style.display = "none";
         document.getElementById("reset").style.display = "none";
@@ -532,7 +532,7 @@
 
     function to_login() {
         hideAll();
-        document.getElementById("login").style.display = "block";
+        document.getElementById("login_panel").style.display = "block";
     }
 
     function to_reset() {
@@ -685,7 +685,7 @@
     function reset_passwd() {
         var phone = document.getElementById("reset_phone").value.trim();
         var code = document.getElementById("reset_code").value.trim();
-        var passwd = document.getElementById("reset_passwd").value;
+        var passwd = document.getElementById("reset_password").value;
         var passwd_req = document.getElementById("reset_req_passwd").value;
         if (phone === "" || code === "" || passwd === "" || passwd_req === "") {
             return showToast("请填写完整！", "warning");
