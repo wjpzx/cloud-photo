@@ -186,6 +186,17 @@ def index(request):
         sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=False)
         current_folder = None
     
+    # 构建面包屑路径（从根到当前文件夹）
+    breadcrumbs = [{'id': 0, 'name': '根目录'}]
+    if current_folder:
+        ancestors = []
+        f = current_folder
+        while f:
+            ancestors.insert(0, f)
+            f = f.parent
+        for a in ancestors:
+            breadcrumbs.append({'id': a.id, 'name': a.name})
+    
     if files:
         for file in files:
             file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
@@ -199,6 +210,7 @@ def index(request):
         'folders': sub_folders,
         'current_folder': current_folder,
         'folder_id': folder_id,
+        'breadcrumbs': breadcrumbs,
         'request': request,
     }
     return render(request, 'pic.html', context=context)

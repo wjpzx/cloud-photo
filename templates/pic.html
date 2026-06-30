@@ -158,6 +158,37 @@
         .folder-nav:hover .drop-hint {
             opacity: 1;
         }
+        .breadcrumb-path {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.15rem;
+        }
+        .breadcrumb-item {
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.4rem;
+            transition: all 0.15s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .breadcrumb-item a {
+            color: #54a0ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .breadcrumb-item a:hover { text-decoration: underline; }
+        .breadcrumb-item.current span {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        .breadcrumb-item.drag-over {
+            background: rgba(84,160,255,0.15);
+            outline: 2px dashed #54a0ff;
+        }
+        .breadcrumb-sep {
+            color: #555;
+            margin: 0 0.1rem;
+        }
 
         /* --- Photo Grid --- */
         .photo-grid {
@@ -546,14 +577,22 @@
     <div class="folder-nav" id="rootDropZone"
          ondragover="folderDragOver(event)" ondragleave="folderDragLeave(event)" ondrop="moveToRoot(event)">
         <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <a href="?folder_id=0" class="btn btn-sm btn-outline-secondary me-2">
-                    <i class="fas fa-home"></i> 根目录
-                </a>
-                {% if current_folder %}
-                <span class="text-muted">/ {{ current_folder.name }}</span>
-                {% endif %}
-                <small class="text-muted ms-2 drop-hint">拖文件到此处移出</small>
+            <div class="breadcrumb-path">
+                {% for bc in breadcrumbs %}
+                    {% if not forloop.last %}
+                    <span class="breadcrumb-item" data-folder-id="{{ bc.id }}"
+                          ondragover="breadcrumbDragOver(event, {{ bc.id }})" ondragleave="folderDragLeave(event)"
+                          ondrop="breadcrumbDrop(event, {{ bc.id }})">
+                        <a href="?folder_id={{ bc.id }}">{{ bc.name }}</a>
+                        <span class="breadcrumb-sep">/</span>
+                    </span>
+                    {% else %}
+                    <span class="breadcrumb-item current" data-folder-id="{{ bc.id }}">
+                        <span>{{ bc.name }}</span>
+                    </span>
+                    {% endif %}
+                {% endfor %}
+                <small class="text-muted ms-2 drop-hint">拖文件到路径上可跳转</small>
             </div>
             <div>
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="showCreateFolder()">
@@ -931,6 +970,9 @@
 
     // --- Drag & Drop ---
     var dragFileId = null;
+    var navigateTimer = null;
+    var NAVIGATE_DELAY = 800; // 悬停800ms后自动跳转
+
     function dragStart(e, fileId) {
         dragFileId = fileId;
         e.dataTransfer.effectAllowed = 'move';
@@ -947,6 +989,7 @@
         e.preventDefault();
         e.stopPropagation();
         e.currentTarget.classList.remove('drag-over');
+        clearTimeout(navigateTimer);
         if (!dragFileId) return;
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: folderId}, function(res) {
             if (res.status === 0) {
@@ -960,7 +1003,8 @@
     }
     function moveToRoot(e) {
         e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
+        e.stopPropagation();
+        clearTimeout(navigateTimer);
         if (!dragFileId) return;
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: '0'}, function(res) {
             if (res.status === 0) {
@@ -972,6 +1016,51 @@
         }).fail(function() { showMessage('danger', '移动失败'); });
         dragFileId = null;
     }
+
+    // 面包屑拖拽：延时后跳转到上级目录
+    function breadcrumbDragOver(e, folderId) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.add('drag-over');
+        clearTimeout(navigateTimer);
+        navigateTimer = setTimeout(function() {
+            location.href = '?folder_id=' + folderId;
+        }, NAVIGATE_DELAY);
+    }
+    function breadcrumbDrop(e, folderId) {
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(navigateTimer);
+        e.currentTarget.classList.remove('drag-over');
+        if (!dragFileId) return;
+        $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: String(folderId)}, function(res) {
+            if (res.status === 0) {
+                showMessage('success', '已移动');
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                showMessage('danger', res.message);
+            }
+        }).fail(function() { showMessage('danger', '移动失败'); });
+        dragFileId = null;
+    }
+
+    // 文件夹悬停延时自动进入
+    function setupFolderHoverTimers() {
+        document.querySelectorAll('.folder-card').forEach(function(card) {
+            card.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var fid = this.getAttribute('data-folder-id');
+                if (!fid) return;
+                clearTimeout(navigateTimer);
+                navigateTimer = setTimeout(function() {
+                    location.href = '?folder_id=' + fid;
+                }, NAVIGATE_DELAY);
+            });
+        });
+    }
+    // 初始化
+    setupFolderHoverTimers();
 
     // --- Share ---
     var shareFileId = null;
