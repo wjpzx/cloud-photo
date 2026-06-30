@@ -610,6 +610,7 @@
         </div>
     </div>
 
+    <div id="dynamicContent">
     <!-- Folders Section -->
     {% if folders %}
     <div class="folder-grid mb-3">
@@ -655,6 +656,7 @@
         <p>{% if current_folder %}此文件夹为空{% else %}暂无照片，快来上传第一张吧{% endif %}</p>
     </div>
     {% endif %}
+</div>
 </div>
 
 <!-- Share Modal -->
@@ -1135,11 +1137,8 @@
         } else {
             gridHtml += '<div class=\"empty-state\"><i class=\"fas fa-camera-retro\"></i><p>此文件夹为空</p></div>';
         }
-        // 替换网格区域
-        var container = document.querySelector('.photo-grid');
-        if (container) {
-            container.parentNode.innerHTML = gridHtml;
-        }
+        // 替换动态区域
+        document.getElementById('dynamicContent').innerHTML = gridHtml;
     }
 
     function escapeHtml(str) {
