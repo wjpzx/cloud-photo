@@ -669,11 +669,27 @@ def verify_share(request):
         return JsonResponse(data={"status": Status.error.value, "message": "分享已过期"})
     if share.password and share.password != password:
         return JsonResponse(data={"status": Status.error.value, "message": "密码错误"})
-    file = share.file
-    file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
-        file.file_id.split('/M00/')[1])
-    return JsonResponse(data={
-        "status": Status.success.value,
-        "url": file.url,
-        "name": file.name,
-    })
+    
+    if share.folder:
+        files = File.objects.filter(folder=share.folder, is_deleted=False)
+        files_data = []
+        for f in files:
+            url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
+                f.file_id.split('/M00/')[1])
+            files_data.append({'id': f.id, 'name': f.name, 'url': url, 'size': f.size})
+        return JsonResponse(data={
+            "status": Status.success.value,
+            "is_folder": True,
+            "files": files_data,
+        })
+    else:
+        file = share.file
+        if not file:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
+        file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
+            file.file_id.split('/M00/')[1])
+        return JsonResponse(data={
+            "status": Status.success.value,
+            "url": file.url,
+            "name": file.name,
+        })

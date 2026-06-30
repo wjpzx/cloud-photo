@@ -148,6 +148,20 @@
         $.post('/fdfs/share/verify/', {code: shareCode, password: pw}, function(res) {
             if (res.status === 0) {
                 $('#passwordArea').hide();
+                if (res.is_folder) {
+                    // Folder share: rebuild content
+                    var html = '';
+                    if (res.files && res.files.length > 0) {
+                        html += '<div class="file-grid">';
+                        res.files.forEach(function(f) {
+                            html += '<div class="file-item"><img src="' + f.url + '" alt="' + f.name + '"><div class="fname">' + f.name + '</div><a href="' + f.url + '" class="fbtn" download><i class="fas fa-download me-1"></i>下载</a></div>';
+                        });
+                        html += '</div>';
+                    } else {
+                        html += '<p style="color:#666;margin-top:1rem;">此文件夹为空</p>';
+                    }
+                    $('#contentArea').html(html);
+                }
                 $('#contentArea').show();
             } else {
                 showError(res.message);
