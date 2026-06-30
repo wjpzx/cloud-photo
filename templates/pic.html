@@ -1018,14 +1018,14 @@
         dragFileId = null;
     }
 
-    // 面包屑拖拽：延时后跳转到上级目录
+    // 面包屑拖拽：延时后 AJAX 加载上级目录
     function breadcrumbDragOver(e, folderId) {
         e.preventDefault();
         e.stopPropagation();
         e.currentTarget.classList.add('drag-over');
         clearTimeout(navigateTimer);
         navigateTimer = setTimeout(function() {
-            location.href = '?folder_id=' + folderId;
+            loadFolderContents(folderId);
         }, NAVIGATE_DELAY);
     }
     function breadcrumbDrop(e, folderId) {
