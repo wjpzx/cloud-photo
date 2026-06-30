@@ -185,10 +185,9 @@
             background: rgba(84,160,255,0.15);
             outline: 2px dashed #54a0ff;
         }
-        .breadcrumb-item:not(.current)::after {
-            content: '/';
+        .breadcrumb-sep {
             color: #555;
-            margin-left: 0.3rem;
+            margin: 0 0.2rem;
         }
 
         /* --- Photo Grid --- */
@@ -586,6 +585,7 @@
                           ondrop="breadcrumbDrop(event, {{ bc.id }})">
                         <a href="?folder_id={{ bc.id }}">{{ bc.name }}</a>
                     </span>
+                    <span class="breadcrumb-sep">/</span>
                     {% else %}
                     <span class="breadcrumb-item current" data-folder-id="{{ bc.id }}">
                         <span>{{ bc.name }}</span>
@@ -1093,7 +1093,8 @@
                 html += '<span class=\"breadcrumb-item\" data-folder-id=\"' + bc.id + '\"'
                     + ' ondragover=\"breadcrumbDragOver(event, ' + bc.id + ')\" ondragleave=\"folderDragLeave(event)\"'
                     + ' ondrop=\"breadcrumbDrop(event, ' + bc.id + ')\">'
-                    + '<a href=\"?folder_id=' + bc.id + '\">' + escapeHtml(bc.name) + '</a></span>';
+                    + '<a href=\"?folder_id=' + bc.id + '\">' + escapeHtml(bc.name) + '</a></span>'
+                    + '<span class=\"breadcrumb-sep\">/</span>';
             }
         }
         html += '<small class=\"text-muted ms-2 drop-hint\">拖文件到路径上可跳转</small>';
