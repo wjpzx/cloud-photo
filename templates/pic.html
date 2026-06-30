@@ -372,6 +372,77 @@
                 padding: 1.5rem;
             }
         }
+
+        /* --- 自定义确认框 --- */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .confirm-dialog {
+            background: rgba(30,30,50,0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 1.2rem;
+            padding: 2rem;
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            animation: scaleIn 0.25s ease;
+        }
+        .confirm-dialog i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .confirm-dialog h4 {
+            color: #fff;
+            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
+        }
+        .confirm-dialog p {
+            color: #999;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        .confirm-dialog .btn-row {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+        }
+        .confirm-dialog .btn-cancel {
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 2rem;
+            padding: 0.5rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .confirm-dialog .btn-cancel:hover { background: rgba(255,255,255,0.2); }
+        .confirm-dialog .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: #fff;
+            border: none;
+            border-radius: 2rem;
+            padding: 0.5rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .confirm-dialog .btn-danger:hover { opacity: 0.85; transform: scale(1.03); }
+        @keyframes scaleIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -552,7 +623,7 @@
             showMessage('warning', '未选择文件');
             return;
         }
-        if (!confirm('确认删除此照片吗？')) return;
+        customConfirm('确认删除此照片吗？', '删除后将移入回收站，30天内可恢复', function() {
 
         $.ajax({
             url: "{% url 'delete_file' %}",
@@ -571,7 +642,7 @@
                 console.error(err);
             }
         });
-    }
+    });
 
     // --- View photo ---
     function Pic(file_url) {
@@ -621,6 +692,40 @@
             }
         }
     });
+</script>
+
+<!-- 自定义确认框 -->
+<div id="confirmModal" class="confirm-overlay" style="display:none;">
+    <div class="confirm-dialog">
+        <i class="fas fa-triangle-exclamation"></i>
+        <h4 id="confirmTitle"></h4>
+        <p id="confirmDesc"></p>
+        <div class="btn-row">
+            <button class="btn-cancel" onclick="closeConfirm()">取消</button>
+            <button class="btn-danger" id="confirmOkBtn">确认删除</button>
+        </div>
+    </div>
+</div>
+<script>
+var _confirmCallback = null;
+function customConfirm(title, desc, callback) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmDesc').textContent = desc || '';
+    document.getElementById('confirmModal').style.display = 'flex';
+    _confirmCallback = callback;
+}
+function closeConfirm() {
+    document.getElementById('confirmModal').style.display = 'none';
+    _confirmCallback = null;
+}
+document.getElementById('confirmOkBtn').addEventListener('click', function() {
+    document.getElementById('confirmModal').style.display = 'none';
+    if (_confirmCallback) {
+        var cb = _confirmCallback;
+        _confirmCallback = null;
+        cb();
+    }
+});
 </script>
 </body>
 </html>
