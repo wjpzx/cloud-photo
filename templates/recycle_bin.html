@@ -1,0 +1,306 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回收站 - 云相册</title>
+    <link href="/static/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/lib/font-awesome/css/all.min.css" rel="stylesheet">
+    <script src="/static/lib/jquery/jquery-3.6.0.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        /* Navbar */
+        .navbar-custom {
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 0.8rem 1.5rem;
+        }
+        .navbar-custom .navbar-brand {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+        .navbar-custom .btn-outline-light {
+            border-radius: 2rem;
+            padding: 0.4rem 1.2rem;
+            font-size: 0.9rem;
+        }
+
+        /* Container */
+        .container-main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .page-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .page-header p {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(255,255,255,0.04);
+            border-radius: 1.5rem;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .empty-state i {
+            font-size: 4rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+        .empty-state p {
+            color: #777;
+            font-size: 1rem;
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Card */
+        .card-item {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .card-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        .card-item .thumb {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+        }
+        .card-item .info {
+            padding: 0.8rem;
+        }
+        .card-item .info .name {
+            font-size: 0.85rem;
+            color: #ccc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-item .info .days {
+            font-size: 0.75rem;
+            margin-top: 0.3rem;
+        }
+        .days-danger { color: #ff6b6b; }
+        .days-warning { color: #feca57; }
+        .days-ok { color: #54a0ff; }
+
+        /* Actions */
+        .card-item .actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0 0.8rem 0.8rem;
+        }
+        .card-item .actions .btn {
+            flex: 1;
+            font-size: 0.78rem;
+            border-radius: 0.5rem;
+            padding: 0.35rem 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-restore {
+            background: rgba(84,160,255,0.2);
+            color: #54a0ff;
+        }
+        .btn-restore:hover { background: rgba(84,160,255,0.35); }
+        .btn-delete-forever {
+            background: rgba(255,107,107,0.15);
+            color: #ff6b6b;
+        }
+        .btn-delete-forever:hover { background: rgba(255,107,107,0.3); }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        .toast-msg {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            backdrop-filter: blur(16px);
+            animation: fadeInDown 0.3s ease;
+            pointer-events: auto;
+            white-space: nowrap;
+        }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toast-success { background: rgba(46,213,115,0.85); color: #fff; }
+        .toast-error { background: rgba(255,107,107,0.85); color: #fff; }
+        .toast-warning { background: rgba(254,202,87,0.85); color: #1a1a2e; }
+
+        @media (max-width: 576px) {
+            .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.6rem; }
+            .card-item .thumb { height: 120px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-custom">
+    <div class="container-fluid">
+        <span class="navbar-brand"><i class="fas fa-trash-can"></i> 回收站</span>
+        <div>
+            <a href="/fdfs/index/" class="btn btn-outline-light btn-sm me-2"><i class="fas fa-images"></i> 相册</a>
+            <a href="/fdfs/logout/" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> 退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-main">
+    <div class="page-header">
+        <h2><i class="fas fa-recycle"></i> 回收站</h2>
+        <p>删除的文件保留30天，到期自动清除</p>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    {% if files %}
+    <div class="grid">
+        {% for file in files %}
+        <div class="card-item" id="card-{{ file.id }}">
+            <img class="thumb" src="{{ file.url }}" alt="{{ file.name }}" loading="lazy"
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22160%22><rect fill=%22%23333%22 width=%22200%22 height=%22160%22/><text fill=%22%23777%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22>图片加载失败</text></svg>'">
+            <div class="info">
+                <div class="name" title="{{ file.name }}">{{ file.name }}</div>
+                <div class="days {% if file.days_left <= 3 %}days-danger{% elif file.days_left <= 7 %}days-warning{% else %}days-ok{% endif %}">
+                    <i class="far fa-clock"></i> 剩余 {{ file.days_left }} 天
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-restore" onclick="restoreFile({{ file.id }})">
+                    <i class="fas fa-undo"></i> 恢复
+                </button>
+                <button class="btn btn-delete-forever" onclick="deleteForever({{ file.id }})">
+                    <i class="fas fa-trash"></i> 彻底删除
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-trash-can"></i>
+        <p>回收站空空如也</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function showToast(msg, type) {
+        var $t = $('<div class="toast-msg toast-' + type + '">' + msg + '</div>');
+        $('#toastContainer').append($t);
+        setTimeout(function() { $t.fadeOut(300, function() { $t.remove(); }); }, 2000);
+    }
+
+    function restoreFile(id) {
+        $.post('/fdfs/restore/', {id: id}, function(res) {
+            if (res.status === 0) {
+                $('#card-' + id).fadeOut(300, function() { $(this).remove(); });
+                showToast('已恢复', 'success');
+                // 如果回收站为空就刷新
+                if ($('.card-item').length <= 1) {
+                    setTimeout(function() { location.reload(); }, 500);
+                }
+            } else {
+                showToast(res.message || '恢复失败', 'error');
+            }
+        }).fail(function() {
+            showToast('网络错误，请重试', 'error');
+        });
+    }
+
+    function deleteForever(id) {
+        if (!confirm('确定要彻底删除吗？此操作不可恢复！')) return;
+        $.post('/fdfs/permanent_delete/', {id: id}, function(res) {
+            if (res.status === 0) {
+                $('#card-' + id).fadeOut(300, function() { $(this).remove(); });
+                showToast('已彻底删除', 'success');
+                if ($('.card-item').length <= 1) {
+                    setTimeout(function() { location.reload(); }, 500);
+                }
+            } else {
+                showToast(res.message || '删除失败', 'error');
+            }
+        }).fail(function() {
+            showToast('网络错误，请重试', 'error');
+        });
+    }
+
+    function getCookie(name) {
+        var v = null;
+        if (document.cookie && document.cookie !== '') {
+            var cs = document.cookie.split(';');
+            for (var i = 0; i < cs.length; i++) {
+                var c = cs[i].trim();
+                if (c.substring(0, name.length + 1) === (name + '=')) {
+                    v = decodeURIComponent(c.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return v;
+    }
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^GET|HEAD|OPTIONS|TRACE$/i.test(settings.type)) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+            }
+        }
+    });
+</script>
+</body>
+</html>

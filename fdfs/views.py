@@ -152,7 +152,7 @@ def logout(request):
 def index(request):
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
-    files = File.objects.filter(user_id=user_id)
+    files = File.objects.filter(user_id=user_id, is_deleted=False)
     if files:
         for file in files:
             file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
@@ -203,16 +203,83 @@ def create(request):
 
 @login_require
 def delete(request):
+    """软删除 — 移入回收站，30天后彻底清除"""
     p_id = int(request.POST.get("id"))
     if p_id:
         try:
-            File.objects.get(id=p_id).delete()
-            return JsonResponse(data={"status": Status.success.value, "message": "删除成功"})
+            from datetime import datetime
+            f = File.objects.get(id=p_id)
+            f.is_deleted = True
+            f.deleted_at = datetime.now()
+            f.save()
+            return JsonResponse(data={"status": Status.success.value, "message": "已移入回收站，30天内可恢复"})
+        except File.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
         except Exception as e:
-            print("file delete error，db_error", e)
-            return JsonResponse(data={"status": Status.error.value, "message": "db错误，请稍后重试"})
+            logger.error("删除文件出错: %s", e)
+            return JsonResponse(data={"status": Status.error.value, "message": "操作失败，请稍后重试"})
     else:
         return JsonResponse(data={"status": Status.error.value, "message": "id错误，请稍后重试"})
+
+
+@login_require
+def recycle_bin(request):
+    """回收站 — 查看已删除文件"""
+    session_id = request.COOKIES.get("session_id")
+    user_id = get_user_id_by_session_id(session_id)
+    files = File.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    for f in files:
+        f.url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
+            f.file_id.split('/M00/')[1])
+        if f.deleted_at:
+            days_left = 30 - (now - f.deleted_at.replace(tzinfo=None)).days
+            f.days_left = max(days_left, 0)
+        else:
+            f.days_left = 30
+    return render(request, 'recycle_bin.html', {'files': files, 'request': request})
+
+
+@login_require
+def restore_file(request):
+    """从回收站恢复文件"""
+    p_id = int(request.POST.get("id"))
+    if p_id:
+        try:
+            f = File.objects.get(id=p_id, is_deleted=True)
+            f.is_deleted = False
+            f.deleted_at = None
+            f.save()
+            return JsonResponse(data={"status": Status.success.value, "message": "已恢复"})
+        except File.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
+    return JsonResponse(data={"status": Status.error.value, "message": "id错误"})
+
+
+@login_require
+def permanent_delete(request):
+    """彻底删除 — 从数据库和 FastDFS 同时删除"""
+    p_id = int(request.POST.get("id"))
+    if p_id:
+        try:
+            f = File.objects.get(id=p_id)
+            remote_file_id = f.file_id
+            # 从 FastDFS 删除
+            try:
+                fastdfs_server.delete_file(remote_file_id)
+            except Exception as e:
+                logger.warning("FastDFS 删除文件失败（可能不存在）: %s, error: %s", remote_file_id, e)
+            # 删除本地缓存
+            local_path = os.path.join('/var/fdfs/data/data', remote_file_id.split('/M00/')[1] if '/M00/' in remote_file_id else remote_file_id)
+            if os.path.exists(local_path):
+                os.remove(local_path)
+            # 从数据库删除
+            f.delete()
+            return JsonResponse(data={"status": Status.success.value, "message": "已彻底删除"})
+        except File.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
+    return JsonResponse(data={"status": Status.error.value, "message": "id错误"})
 
 
 @login_require
@@ -227,10 +294,33 @@ def move_pic(request):
 
 @login_require
 def serve_file(request, path):
-    """登录后才能访问的图片文件"""
-    file_path = os.path.join('/var/fdfs/data/data', path)
+    """登录后才能访问的图片文件 — 优先本地缓存，否则从云端 FastDFS 下载"""
+    local_dir = '/var/fdfs/data/data'
+    file_path = os.path.join(local_dir, path)
+    
+    # 本地缓存存在就直接返回
+    if os.path.exists(file_path):
+        content_types = {
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.png': 'image/png', '.gif': 'image/gif',
+            '.mp4': 'video/mp4', '.webp': 'image/webp',
+        }
+        ext = os.path.splitext(file_path)[1].lower()
+        content_type = content_types.get(ext, 'application/octet-stream')
+        return FileResponse(open(file_path, 'rb'), content_type=content_type)
+    
+    # 本地没有，从云端 FastDFS 下载
+    remote_file_id = 'group1/M00/' + path
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    try:
+        fastdfs_server.download_file(remote_file_id, file_path)
+    except Exception as e:
+        logger.error("从云端下载文件失败: %s, error: %s" % (remote_file_id, e))
+        raise Http404("文件不存在或云端不可达")
+    
     if not os.path.exists(file_path):
         raise Http404
+    
     content_types = {
         '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
         '.png': 'image/png', '.gif': 'image/gif',

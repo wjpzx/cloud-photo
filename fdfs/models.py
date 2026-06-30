@@ -24,6 +24,8 @@ class File(models.Model):
     size = models.CharField(verbose_name="文件大小", max_length=10)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
     modify_time = models.DateTimeField(verbose_name="修改时间", auto_now=True)
+    is_deleted = models.BooleanField(verbose_name="是否删除", default=False)
+    deleted_at = models.DateTimeField(verbose_name="删除时间", null=True, blank=True)
 
 
 class User(models.Model):
