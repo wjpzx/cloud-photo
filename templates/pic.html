@@ -102,7 +102,40 @@
         }
         .upload-area .btn-upload:hover {
             opacity: 0.85;
-            color: #fff;
+        }
+
+        /* --- Folder Grid --- */
+        .folder-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.8rem;
+        }
+        .folder-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.8rem;
+            padding: 1rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .folder-card:hover,
+        .folder-card.drag-over {
+            background: rgba(254,202,87,0.12);
+            border-color: #feca57;
+            transform: translateY(-2px);
+        }
+        .folder-card .folder-icon {
+            font-size: 2rem;
+            color: #feca57;
+            margin-bottom: 0.3rem;
+        }
+        .folder-card .folder-name {
+            font-size: 0.8rem;
+            color: #ccc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* --- Photo Grid --- */
@@ -480,20 +513,67 @@
         </button>
         <form id="uploadForm" enctype="multipart/form-data" style="display:none;">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="folder_id" value="{{ folder_id }}" id="uploadFolderId">
             <input type="file" id="fileInput" name="file" multiple accept=".jpg,.jpeg,.png,.mp4">
         </form>
     </div>
 
+    <!-- Folder Navigation & Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="?folder_id=0" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="fas fa-home"></i> 根目录
+            </a>
+            {% if current_folder %}
+            <span class="text-muted">/ {{ current_folder.name }}</span>
+            {% endif %}
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="showCreateFolder()">
+                <i class="fas fa-folder-plus"></i> 新建文件夹
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentFolder()" id="btnDeleteFolder" {% if not current_folder %}style="display:none;"{% endif %}>
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Create Folder Modal (inline) -->
+    <div id="createFolderBox" style="display:none;" class="d-flex gap-2 mb-3">
+        <input type="text" id="newFolderName" class="form-control form-control-sm" placeholder="文件夹名称" maxlength="20" style="max-width:200px;">
+        <button class="btn btn-sm btn-primary" onclick="createFolder()">创建</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="hideCreateFolder()">取消</button>
+    </div>
+
+    <!-- Folders Section -->
+    {% if folders %}
+    <div class="folder-grid mb-3">
+        {% for folder in folders %}
+        <div class="folder-card" data-folder-id="{{ folder.id }}"
+             ondragover="folderDragOver(event)" ondragleave="folderDragLeave(event)" ondrop="folderDrop(event, {{ folder.id }})"
+             onclick="event.stopPropagation();">
+            <a href="?folder_id={{ folder.id }}" class="text-decoration-none">
+                <div class="folder-icon"><i class="fas fa-folder"></i></div>
+                <div class="folder-name">{{ folder.name }}</div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- All Photos Section -->
-    <h5 class="section-title"><i class="fas fa-images"></i>所有照片</h5>
+    <h6 class="section-title"><i class="fas fa-images"></i>所有照片</h6>
     {% if data %}
     <div class="photo-grid">
         {% for file in data %}
-        <div class="photo-card" data-photo-id="{{ file.id }}">
+        <div class="photo-card" data-photo-id="{{ file.id }}" draggable="true" ondragstart="dragStart(event, {{ file.id }})">
             <img src="{{ file.url }}" alt="{{ file.name }}" onclick="Pic('{{ file.url }}')" loading="lazy">
             <div class="hover-overlay">
                 <button class="btn-action" onclick="Pic('{{ file.url }}')" title="查看大图">
                     <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-action" onclick="shareFile({{ file.id }})" title="分享">
+                    <i class="fas fa-share-nodes"></i>
                 </button>
                 <button class="btn-action btn-danger" onclick="Delete('{{ file.id }}')" title="删除">
                     <i class="fas fa-trash"></i>
@@ -508,14 +588,41 @@
     {% else %}
     <div class="empty-state">
         <i class="fas fa-camera-retro"></i>
-        <p>暂无照片，快来上传第一张吧</p>
+        <p>{% if current_folder %}此文件夹为空{% else %}暂无照片，快来上传第一张吧{% endif %}</p>
     </div>
     {% endif %}
+</div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="confirm-overlay" style="display:none;">
+    <div class="confirm-dialog" style="max-width:450px;">
+        <i class="fas fa-share-nodes" style="background: linear-gradient(135deg,#54a0ff,#5f27cd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></i>
+        <h4>创建分享链接</h4>
+        <div style="text-align:left;margin-bottom:1rem;">
+            <label class="text-muted small">提取码（可选，留空则无需密码）</label>
+            <input type="text" id="sharePassword" class="form-control form-control-sm" placeholder="6位以内" maxlength="6" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;">
+            <label class="text-muted small mt-2">有效期</label>
+            <select id="shareExpire" class="form-select form-select-sm" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;">
+                <option value="1">1小时</option>
+                <option value="24" selected>24小时</option>
+                <option value="72">3天</option>
+                <option value="168">7天</option>
+            </select>
+        </div>
+        <div id="shareResult" style="display:none;margin-bottom:1rem;">
+            <input type="text" id="shareUrl" class="form-control form-control-sm" readonly style="background:rgba(84,160,255,0.15);border:1px solid #54a0ff;color:#54a0ff;" onclick="this.select()">
+        </div>
+        <div class="btn-row">
+            <button class="btn-cancel" onclick="closeShareModal()">取消</button>
+            <button class="btn-danger" id="shareCreateBtn" style="background:linear-gradient(135deg,#54a0ff,#5f27cd);">生成链接</button>
+        </div>
+    </div>
 </div>
 
 <!-- Photo Context Menu (right-click on photo) -->
 <div id="photoContextMenu" class="custom-context-menu">
     <button onclick="Pic(currentPhotoUrl)"><i class="fas fa-eye"></i>查看大图</button>
+    <button onclick="shareFile(currentPhotoId)"><i class="fas fa-share-nodes"></i>分享</button>
     <button onclick="Delete(currentPhotoId)"><i class="fas fa-trash"></i>删除</button>
 </div>
 
@@ -652,6 +759,103 @@
         });
     });
     }
+
+    // --- Folder Management ---
+    function showCreateFolder() {
+        $('#createFolderBox').show();
+        $('#newFolderName').focus();
+    }
+    function hideCreateFolder() {
+        $('#createFolderBox').hide();
+        $('#newFolderName').val('');
+    }
+    function createFolder() {
+        var name = $('#newFolderName').val().trim();
+        if (!name) return showMessage('warning', '请输入文件夹名称');
+        $.post('/fdfs/folder/create/', {
+            name: name,
+            parent_id: '{{ folder_id }}' || '0'
+        }, function(res) {
+            if (res.status === 0) {
+                showMessage('success', '文件夹已创建');
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                showMessage('danger', res.message);
+            }
+        }).fail(function() { showMessage('danger', '创建失败'); });
+    }
+    function deleteCurrentFolder() {
+        {% if current_folder %}
+        customConfirm('删除文件夹？', '文件夹内所有文件和子文件夹将移入回收站', function() {
+            $.post('/fdfs/folder/delete/', {id: {{ current_folder.id }}}, function(res) {
+                if (res.status === 0) {
+                    showMessage('success', '已移入回收站');
+                    setTimeout(function() { location.href = '?folder_id=0'; }, 500);
+                } else {
+                    showMessage('danger', res.message);
+                }
+            }).fail(function() { showMessage('danger', '操作失败'); });
+        });
+        {% endif %}
+    }
+
+    var dragFileId = null;
+    function dragStart(e, fileId) {
+        dragFileId = fileId;
+        e.dataTransfer.effectAllowed = 'move';
+    }
+    function folderDragOver(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    }
+    function folderDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+    function folderDrop(e, folderId) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        if (!dragFileId) return;
+        $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: folderId}, function(res) {
+            if (res.status === 0) {
+                showMessage('success', '已移动');
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                showMessage('danger', res.message);
+            }
+        }).fail(function() { showMessage('danger', '移动失败'); });
+        dragFileId = null;
+    }
+
+    var shareFileId = null;
+    function shareFile(fileId) {
+        shareFileId = fileId;
+        $('#shareResult').hide();
+        $('#sharePassword').val('');
+        $('#shareExpire').val('24');
+        $('#shareModal').show();
+    }
+    function closeShareModal() {
+        $('#shareModal').hide();
+        shareFileId = null;
+    }
+    $('#shareCreateBtn').click(function() {
+        if (!shareFileId) return;
+        var pw = $('#sharePassword').val().trim();
+        var expire = $('#shareExpire').val();
+        $.post('/fdfs/share/create/', {
+            file_id: shareFileId,
+            password: pw,
+            expire_hours: expire
+        }, function(res) {
+            if (res.status === 0) {
+                $('#shareUrl').val(res.share_url);
+                $('#shareResult').show();
+                showMessage('success', '分享链接已生成，点击链接复制');
+            } else {
+                showMessage('danger', res.message);
+            }
+        }).fail(function() { showMessage('danger', '创建失败'); });
+    });
 
     // --- View photo ---
     function Pic(file_url) {

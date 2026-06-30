@@ -15,7 +15,7 @@ from django.views.generic.base import View
 
 from utils import redis
 from utils.fdfs import fastdfs_server
-from fdfs.models import File, User, Status
+from fdfs.models import File, User, Status, Folder, Share
 from utils.redis import get_user_id_by_session_id, check_sms_rate_limit, check_sms_daily_limit, check_sms_ip_limit
 from utils.wrapper import login_require
 from utils.yunpian import yunpian
@@ -152,19 +152,39 @@ def logout(request):
 def index(request):
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
-    files = File.objects.filter(user_id=user_id, is_deleted=False)
+    
+    # 当前文件夹 ID（0=根目录）
+    folder_id = request.GET.get("folder_id", "0")
+    if folder_id != "0":
+        try:
+            current_folder = Folder.objects.get(id=int(folder_id), user_id=user_id, is_deleted=False)
+            files = File.objects.filter(user_id=user_id, folder=current_folder, is_deleted=False)
+            sub_folders = Folder.objects.filter(user_id=user_id, parent=current_folder, is_deleted=False)
+        except Folder.DoesNotExist:
+            files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=False)
+            sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=False)
+            folder_id = "0"
+            current_folder = None
+    else:
+        files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=False)
+        sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=False)
+        current_folder = None
+    
     if files:
         for file in files:
             file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
                 file.file_id.split('/M00/')[1])
-
         data = files
-        context = {
-            'data': data,
-            'request': request,
-        }
     else:
-        context = {'request': request}
+        data = None
+    
+    context = {
+        'data': data,
+        'folders': sub_folders,
+        'current_folder': current_folder,
+        'folder_id': folder_id,
+        'request': request,
+    }
     return render(request, 'pic.html', context=context)
 
 
@@ -172,9 +192,13 @@ def index(request):
 def create(request):
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
+    folder_id = request.POST.get("folder_id", "").strip()
     old_files = request.FILES.getlist("file")
     if old_files:
         try:
+            folder = None
+            if folder_id and folder_id != "0":
+                folder = Folder.objects.get(id=int(folder_id), user_id=user_id)
             for old_file in old_files:
                 content = []
                 for line in old_file.chunks():
@@ -188,12 +212,15 @@ def create(request):
                 if status == 'Upload successed.':
                     file = File()
                     file.user_id = user_id
+                    file.folder = folder
                     file.name = old_file.name
                     file.file_id = file_id
                     file.size = size
                     file.save()
+        except Folder.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
         except Exception as e:
-            print("file_upload_error", e)
+            logger.error("file_upload_error: %s", e)
             return JsonResponse(data={"status": Status.error.value, "message": "上传错误，请稍后重试"})
 
         return JsonResponse(data={"status": Status.success.value, "message": "上传成功"})
@@ -224,10 +251,11 @@ def delete(request):
 
 @login_require
 def recycle_bin(request):
-    """回收站 — 查看已删除文件"""
+    """回收站 — 查看已删除文件和文件夹"""
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
     files = File.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
+    folders = Folder.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
     from datetime import datetime, timedelta
     now = datetime.now()
     for f in files:
@@ -238,7 +266,14 @@ def recycle_bin(request):
             f.days_left = max(days_left, 0)
         else:
             f.days_left = 30
-    return render(request, 'recycle_bin.html', {'files': files, 'request': request})
+        f.item_type = 'file'
+    for f in folders:
+        f.days_left = 30
+        if f.deleted_at:
+            days_left = 30 - (now - f.deleted_at.replace(tzinfo=None)).days
+            f.days_left = max(days_left, 0)
+        f.item_type = 'folder'
+    return render(request, 'recycle_bin.html', {'files': files, 'folders': folders, 'request': request})
 
 
 @login_require
@@ -307,3 +342,194 @@ def serve_file(request, path):
     ext = os.path.splitext(path)[1].lower()
     content_type = content_types.get(ext, 'application/octet-stream')
     return HttpResponse(content, content_type=content_type)
+
+
+# ==================== 文件夹管理 ====================
+
+@login_require
+def create_folder(request):
+    """新建文件夹"""
+    session_id = request.COOKIES.get("session_id")
+    user_id = get_user_id_by_session_id(session_id)
+    name = request.POST.get("name", "").strip()
+    parent_id = request.POST.get("parent_id", "").strip()
+    if not name:
+        return JsonResponse(data={"status": Status.error.value, "message": "请输入文件夹名称"})
+    parent = None
+    if parent_id and parent_id != "0":
+        try:
+            parent = Folder.objects.get(id=int(parent_id), user_id=user_id, is_deleted=False)
+        except Folder.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "父文件夹不存在"})
+    f = Folder.objects.create(user_id=user_id, name=name, parent=parent)
+    return JsonResponse(data={"status": Status.success.value, "message": "创建成功", "id": f.id, "name": f.name})
+
+
+@login_require
+def rename_folder(request):
+    """重命名文件夹"""
+    folder_id = int(request.POST.get("id"))
+    name = request.POST.get("name", "").strip()
+    if not name:
+        return JsonResponse(data={"status": Status.error.value, "message": "名称不能为空"})
+    try:
+        f = Folder.objects.get(id=folder_id, is_deleted=False)
+        f.name = name
+        f.save()
+        return JsonResponse(data={"status": Status.success.value, "message": "重命名成功"})
+    except Folder.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
+
+
+@login_require
+def delete_folder(request):
+    """软删除文件夹 — 同时软删除其下所有子文件夹和文件"""
+    f_id = int(request.POST.get("id"))
+    try:
+        folder = Folder.objects.get(id=f_id, is_deleted=False)
+    except Folder.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
+    from datetime import datetime
+    now = datetime.now()
+    # 递归删除所有子文件夹和文件
+    def soft_delete_folder(f):
+        f.is_deleted = True
+        f.deleted_at = now
+        f.save()
+        for sub in Folder.objects.filter(parent=f, is_deleted=False):
+            soft_delete_folder(sub)
+        File.objects.filter(folder=f, is_deleted=False).update(is_deleted=True, deleted_at=now)
+    soft_delete_folder(folder)
+    return JsonResponse(data={"status": Status.success.value, "message": "文件夹已移入回收站"})
+
+
+@login_require
+def restore_folder(request):
+    """从回收站恢复文件夹及其子内容"""
+    f_id = int(request.POST.get("id"))
+    try:
+        folder = Folder.objects.get(id=f_id, is_deleted=True)
+    except Folder.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
+    def restore(f):
+        f.is_deleted = False
+        f.deleted_at = None
+        f.save()
+        for sub in Folder.objects.filter(parent=f, is_deleted=True):
+            restore(sub)
+        File.objects.filter(folder=f, is_deleted=True).update(is_deleted=False, deleted_at=None)
+    restore(folder)
+    return JsonResponse(data={"status": Status.success.value, "message": "文件夹已恢复"})
+
+
+@login_require
+def permanent_delete_folder(request):
+    """彻底删除文件夹 — 递归删子内容 + 文件从 FastDFS 删除"""
+    f_id = int(request.POST.get("id"))
+    try:
+        folder = Folder.objects.get(id=f_id)
+    except Folder.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
+    def force_delete(f):
+        for sub in Folder.objects.filter(parent=f):
+            force_delete(sub)
+        for fl in File.objects.filter(folder=f):
+            try:
+                fastdfs_server.delete_file(fl.file_id)
+            except Exception:
+                pass
+            fl.delete()
+        f.delete()
+    force_delete(folder)
+    return JsonResponse(data={"status": Status.success.value, "message": "已彻底删除"})
+
+
+# ==================== 文件移动 ====================
+
+@login_require
+def move_file(request):
+    """移动文件到文件夹"""
+    file_id = int(request.POST.get("file_id"))
+    folder_id = request.POST.get("folder_id", "").strip()
+    try:
+        f = File.objects.get(id=file_id, is_deleted=False)
+        if folder_id and folder_id != "0":
+            target = Folder.objects.get(id=int(folder_id), is_deleted=False)
+            f.folder = target
+        else:
+            f.folder = None  # 移到根目录
+        f.save()
+        return JsonResponse(data={"status": Status.success.value, "message": "移动成功"})
+    except File.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
+    except Folder.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "目标文件夹不存在"})
+
+
+# ==================== 分享功能 ====================
+
+@login_require
+def create_share(request):
+    """创建分享链接"""
+    session_id = request.COOKIES.get("session_id")
+    user_id = get_user_id_by_session_id(session_id)
+    file_id = int(request.POST.get("file_id"))
+    password = request.POST.get("password", "").strip()
+    expire_hours = int(request.POST.get("expire_hours", "24"))
+    try:
+        f = File.objects.get(id=file_id, user_id=user_id, is_deleted=False)
+    except File.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
+    share = Share.objects.create(
+        file=f, user_id=user_id, password=password, expire_hours=expire_hours
+    )
+    share_url = request.build_absolute_uri(f"/fdfs/share/{share.code}/")
+    return JsonResponse(data={
+        "status": Status.success.value,
+        "message": "分享链接已生成",
+        "share_url": share_url,
+        "code": share.code,
+        "has_password": bool(password),
+    })
+
+
+def share_page(request, code):
+    """分享访问页面 — 无需登录"""
+    try:
+        share = Share.objects.get(code=code)
+    except Share.DoesNotExist:
+        return render(request, 'share.html', {'error': '分享链接不存在或已失效'})
+    if share.is_expired():
+        return render(request, 'share.html', {'error': '分享链接已过期'})
+    share.view_count += 1
+    share.save()
+    file = share.file
+    file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
+        file.file_id.split('/M00/')[1])
+    return render(request, 'share.html', {
+        'share': share,
+        'file': file,
+        'require_password': bool(share.password),
+    })
+
+
+def verify_share(request):
+    """验证分享密码"""
+    code = request.POST.get("code")
+    password = request.POST.get("password", "").strip()
+    try:
+        share = Share.objects.get(code=code)
+    except Share.DoesNotExist:
+        return JsonResponse(data={"status": Status.error.value, "message": "分享不存在"})
+    if share.is_expired():
+        return JsonResponse(data={"status": Status.error.value, "message": "分享已过期"})
+    if share.password and share.password != password:
+        return JsonResponse(data={"status": Status.error.value, "message": "密码错误"})
+    file = share.file
+    file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
+        file.file_id.split('/M00/')[1])
+    return JsonResponse(data={
+        "status": Status.success.value,
+        "url": file.url,
+        "name": file.name,
+    })
