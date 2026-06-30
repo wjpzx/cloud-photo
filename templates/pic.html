@@ -746,6 +746,7 @@
 
 <!-- Folder Context Menu -->
 <div id="folderContextMenu" class="custom-context-menu">
+    <button onclick="shareFolder(contextFolderId)"><i class="fas fa-share-nodes"></i>分享</button>
     <button onclick="renameFolderFromMenu()"><i class="fas fa-pen"></i>重命名</button>
     <button onclick="deleteFolderFromMenu()"><i class="fas fa-trash"></i>删除</button>
 </div>
@@ -1197,8 +1198,18 @@
 
     // --- Share ---
     var shareFileId = null;
+    var shareFolderId = null;
     function shareFile(fileId) {
         shareFileId = fileId;
+        shareFolderId = null;
+        $('#shareResult').hide();
+        $('#sharePassword').val('');
+        $('#shareExpire').val('24');
+        $('#shareModal').show();
+    }
+    function shareFolder(folderId) {
+        shareFolderId = folderId;
+        shareFileId = null;
         $('#shareResult').hide();
         $('#sharePassword').val('');
         $('#shareExpire').val('24');
@@ -1207,19 +1218,19 @@
     function closeShareModal() {
         $('#shareModal').hide();
         shareFileId = null;
+        shareFolderId = null;
     }
     $('#shareCreateBtn').off('click').click(function() {
-        if (!shareFileId) return;
+        if (!shareFileId && !shareFolderId) return;
         var pw = $('#sharePassword').val().trim();
         var expire = $('#shareExpire').val();
+        var data = { password: pw, expire_hours: expire };
+        if (shareFolderId) { data.folder_id = shareFolderId; }
+        else { data.file_id = shareFileId; }
         $.ajax({
             url: '/fdfs/share/create/',
             method: 'POST',
-            data: {
-                file_id: shareFileId,
-                password: pw,
-                expire_hours: expire
-            },
+            data: data,
             success: function(res) {
                 if (res.status === 0) {
                     $('#shareUrl').val(res.share_url);

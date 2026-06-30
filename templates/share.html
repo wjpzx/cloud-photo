@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>云相册 - 分享文件</title>
+    <title>云相册 - 分享</title>
     <link href="/static/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/lib/font-awesome/css/all.min.css" rel="stylesheet">
     <script src="/static/lib/jquery/jquery-3.6.0.min.js"></script>
@@ -14,100 +14,87 @@
             min-height: 100vh;
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex; align-items: center; justify-content: center;
             color: #e0e0e0;
+            padding: 2rem;
         }
         .card {
             background: rgba(255,255,255,0.06);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 1.5rem;
-            padding: 2.5rem;
-            max-width: 520px;
-            width: 90%;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s ease;
         }
-        .card .icon {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #54a0ff, #5f27cd);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .card h2 {
-            color: #fff; font-size: 1.4rem; margin-bottom: 0.5rem;
-        }
-        .card .file-info {
-            color: #888; font-size: 0.9rem; margin-bottom: 1.5rem;
-        }
-        .card .file-info span {
-            color: #54a0ff; font-weight: 600;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .card .icon { font-size: 3rem; margin-bottom: 0.5rem; }
+        .card h2 { color: #fff; font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .card .file-info { color: #888; font-size: 0.9rem; margin-bottom: 1rem; }
         .card input {
-            width: 100%;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 0.8rem;
-            padding: 0.75rem 1rem;
-            color: #fff;
-            font-size: 1rem;
-            text-align: center;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; max-width: 250px;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 0.8rem; padding: 0.75rem 1rem;
+            color: #fff; font-size: 1rem; text-align: center; outline: none;
         }
         .card input:focus { border-color: #54a0ff; }
         .card input::placeholder { color: #666; }
         .card .btn-download {
-            width: 100%;
             background: linear-gradient(135deg, #54a0ff, #5f27cd);
-            color: #fff;
-            border: none;
-            border-radius: 2rem;
-            padding: 0.75rem;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: opacity 0.2s;
+            color: #fff; border: none; border-radius: 2rem;
+            padding: 0.65rem 1.5rem; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; margin-top: 1rem; transition: opacity 0.2s;
+            display: inline-block; text-decoration: none;
         }
         .card .btn-download:hover { opacity: 0.85; }
-        .card .error {
-            color: #ff6b6b;
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-            display: none;
-        }
-        .card .preview {
+        .card .error { color: #ff6b6b; font-size: 0.9rem; margin-top: 0.5rem; display: none; }
+        .card .meta { margin-top: 1rem; font-size: 0.8rem; color: #666; }
+
+        /* File grid for folder shares */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.8rem;
             margin-top: 1.5rem;
-            border-radius: 1rem;
+            text-align: left;
+        }
+        .file-grid .file-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.8rem;
             overflow: hidden;
-            display: none;
         }
-        .card .preview img {
-            width: 100%; max-height: 300px; object-fit: cover;
-            display: block;
+        .file-grid .file-item img {
+            width: 100%; height: 120px; object-fit: cover; display: block;
         }
-        .card .meta {
-            margin-top: 1rem;
-            font-size: 0.8rem;
-            color: #666;
+        .file-grid .file-item .fname {
+            padding: 0.4rem; font-size: 0.78rem; color: #aaa;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .card { animation: fadeIn 0.5s ease; }
+        .file-grid .file-item .fbtn {
+            display: block; text-align: center; padding: 0.3rem;
+            background: rgba(84,160,255,0.15); color: #54a0ff;
+            font-size: 0.75rem; text-decoration: none;
+        }
     </style>
 </head>
 <body>
 
 <div class="card">
     {% if error %}
-    <i class="fas fa-link-slash icon"></i>
+    <i class="fas fa-link-slash icon" style="background:linear-gradient(135deg,#ff6b6b,#feca57);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></i>
     <h2>无法访问</h2>
     <p class="file-info">{{ error }}</p>
     {% else %}
-    <i class="fas fa-share-nodes icon"></i>
-    <h2>{{ share.user.name|default:"用户" }} 分享了一个文件</h2>
-    <p class="file-info">{{ file.name }} <span>({{ file.size }} B)</span></p>
+    <i class="fas {% if is_folder %}fa-folder-open{% else %}fa-share-nodes{% endif %} icon"
+       style="background:linear-gradient(135deg,{% if is_folder %}#feca57,#ff9f43{% else %}#54a0ff,#5f27cd{% endif %});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></i>
+    <h2>{{ share.user.name|default:"用户" }} 分享的{% if is_folder %}文件夹{% else %}文件{% endif %}</h2>
+    <p class="file-info">
+        {% if is_folder %}{{ folder_name }}{% else %}{{ files.0.name }}{% endif %}
+        {% if not is_folder %}<span style="color:#54a0ff;">({{ files.0.size }} B)</span>{% endif %}
+    </p>
 
     {% if require_password %}
     <div id="passwordArea">
@@ -117,20 +104,33 @@
             <i class="fas fa-unlock me-2"></i>验证提取码
         </button>
     </div>
-    <div class="preview" id="previewArea">
-        <img id="previewImg" src="" alt="{{ file.name }}">
-        <button class="btn-download" onclick="downloadFile()">
-            <i class="fas fa-download me-2"></i>下载文件
-        </button>
-    </div>
+    <div id="contentArea" style="display:none;">
     {% else %}
-    <div class="preview" id="previewArea" style="display:block;">
-        <img src="{{ file.url }}" alt="{{ file.name }}">
-        <a href="{{ file.url }}" class="btn-download" style="display:block; text-decoration:none; margin-top:1rem;" download>
+    <div id="contentArea">
+    {% endif %}
+
+    {% if is_folder %}
+        {% if files %}
+        <div class="file-grid">
+            {% for f in files %}
+            <div class="file-item">
+                <img src="{{ f.url }}" alt="{{ f.name }}" loading="lazy">
+                <div class="fname">{{ f.name }}</div>
+                <a href="{{ f.url }}" class="fbtn" download><i class="fas fa-download me-1"></i>下载</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:#666;margin-top:1rem;">此文件夹为空</p>
+        {% endif %}
+    {% else %}
+        <img src="{{ files.0.url }}" alt="{{ files.0.name }}" style="max-width:100%;max-height:350px;border-radius:0.8rem;margin-top:1rem;">
+        <br>
+        <a href="{{ files.0.url }}" class="btn-download" download style="margin-top:0.5rem;">
             <i class="fas fa-download me-2"></i>下载文件
         </a>
-    </div>
     {% endif %}
+    </div>
 
     <p class="meta">
         有效期至: {{ share.create_time|date:"Y-m-d H:i" }} ({{ share.expire_hours }}小时) · {{ share.view_count }} 次浏览
@@ -141,25 +141,18 @@
 {% if require_password %}
 <script>
     var shareCode = "{{ share.code }}";
-    var shareUrl = "";
 
     function verifyPassword() {
         var pw = $('#sharePassword').val().trim();
         if (!pw) { showError('请输入提取码'); return; }
         $.post('/fdfs/share/verify/', {code: shareCode, password: pw}, function(res) {
             if (res.status === 0) {
-                shareUrl = res.url;
                 $('#passwordArea').hide();
-                $('#previewImg').attr('src', res.url);
-                $('#previewArea').show();
+                $('#contentArea').show();
             } else {
                 showError(res.message);
             }
         }).fail(function() { showError('网络错误，请重试'); });
-    }
-
-    function downloadFile() {
-        if (shareUrl) window.open(shareUrl, '_blank');
     }
 
     function showError(msg) {
@@ -167,7 +160,6 @@
         setTimeout(function() { $('#errMsg').fadeOut(); }, 2000);
     }
 
-    // Enter key submit
     $('#sharePassword').on('keydown', function(e) { if (e.key === 'Enter') verifyPassword(); });
 </script>
 {% endif %}

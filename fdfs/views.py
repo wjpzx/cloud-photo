@@ -583,19 +583,32 @@ def move_file(request):
 
 @login_require
 def create_share(request):
-    """创建分享链接"""
+    """创建分享链接（文件或文件夹）"""
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
-    file_id = int(request.POST.get("file_id"))
+    file_id = request.POST.get("file_id", "").strip()
+    folder_id = request.POST.get("folder_id", "").strip()
     password = _normalize(request.POST.get("password", "").strip())
     expire_hours = int(request.POST.get("expire_hours", "24"))
-    try:
-        f = File.objects.get(id=file_id, user_id=user_id, is_deleted=False)
-    except File.DoesNotExist:
-        return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
-    share = Share.objects.create(
-        file=f, user_id=user_id, password=password, expire_hours=expire_hours
-    )
+    
+    share = Share(user_id=user_id, password=password, expire_hours=expire_hours)
+    
+    if folder_id:
+        try:
+            folder = Folder.objects.get(id=int(folder_id), user_id=user_id, is_deleted=False)
+            share.folder = folder
+        except Folder.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
+    elif file_id:
+        try:
+            f = File.objects.get(id=int(file_id), user_id=user_id, is_deleted=False)
+            share.file = f
+        except File.DoesNotExist:
+            return JsonResponse(data={"status": Status.error.value, "message": "文件不存在"})
+    else:
+        return JsonResponse(data={"status": Status.error.value, "message": "请选择文件或文件夹"})
+    
+    share.save()
     share_url = request.build_absolute_uri(f"/fdfs/share/{share.code}/")
     return JsonResponse(data={
         "status": Status.success.value,
@@ -616,12 +629,29 @@ def share_page(request, code):
         return render(request, 'share.html', {'error': '分享链接已过期'})
     share.view_count += 1
     share.save()
-    file = share.file
-    file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
-        file.file_id.split('/M00/')[1])
+    
+    is_folder = share.folder is not None
+    files = []
+    
+    if is_folder:
+        folder = share.folder
+        folder_files = File.objects.filter(folder=folder, is_deleted=False)
+        for f in folder_files:
+            f.url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
+                f.file_id.split('/M00/')[1])
+            files.append({'id': f.id, 'name': f.name, 'url': f.url, 'size': f.size})
+    else:
+        file = share.file
+        if file:
+            file.url = settings.FASTDFS_FILE_PATH.get(file.file_id.split('/M00/')[0])['url_format'].format(
+                file.file_id.split('/M00/')[1])
+            files.append({'id': file.id, 'name': file.name, 'url': file.url, 'size': file.size})
+    
     return render(request, 'share.html', {
         'share': share,
-        'file': file,
+        'files': files,
+        'is_folder': is_folder,
+        'folder_name': share.folder.name if is_folder else '',
         'require_password': bool(share.password),
     })
 

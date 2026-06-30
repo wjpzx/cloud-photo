@@ -47,7 +47,8 @@ class File(models.Model):
 
 class Share(models.Model):
     """分享链接模型"""
-    file = models.ForeignKey(File, on_delete=models.CASCADE, verbose_name="分享文件")
+    file = models.ForeignKey(File, on_delete=models.CASCADE, null=True, blank=True, verbose_name="分享文件")
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True, verbose_name="分享文件夹")
     user = models.ForeignKey("User", on_delete=models.CASCADE, verbose_name="分享者")
     code = models.CharField(verbose_name="分享码", max_length=36, unique=True, default=uuid.uuid4)
     password = models.CharField(verbose_name="访问密码", max_length=6, blank=True, default="")
@@ -63,8 +64,13 @@ class Share(models.Model):
         from datetime import datetime, timedelta
         return datetime.now() > self.create_time.replace(tzinfo=None) + timedelta(hours=self.expire_hours)
 
+    def get_name(self):
+        if self.folder:
+            return f"[文件夹] {self.folder.name}"
+        return self.file.name if self.file else "未知"
+
     def __str__(self):
-        return f"{self.file.name} → {self.code}"
+        return f"{self.get_name()} → {self.code}"
 
 
 class User(models.Model):
