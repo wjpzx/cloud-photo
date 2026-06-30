@@ -13,83 +13,55 @@
         body {
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
-            color: #e0e0e0;
-            padding-top: 60px;
+            min-height: 100vh; color: #e0e0e0; padding-top: 60px;
         }
-
         .navbar-custom {
             position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
             background: rgba(255,255,255,0.06); backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(255,255,255,0.08); padding: 0.8rem 1.5rem;
         }
         .navbar-custom .navbar-brand { color: #fff; font-weight: 700; font-size: 1.3rem; }
-        .navbar-custom .btn-outline-light { border-radius: 2rem; padding: 0.4rem 1.2rem; font-size: 0.9rem; }
 
-        .container-main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+        .container-main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
 
-        /* Breadcrumb */
-        .breadcrumb-nav {
-            display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem;
-            margin-bottom: 1.5rem; padding: 0.5rem 0.75rem;
-            border: 2px dashed rgba(255,255,255,0.1); border-radius: 0.8rem;
-        }
-        .breadcrumb-nav a { color: #54a0ff; text-decoration: none; font-size: 0.9rem; }
-        .breadcrumb-nav a:hover { text-decoration: underline; }
-        .breadcrumb-nav .sep { color: #555; margin: 0 0.3rem; }
-        .breadcrumb-nav .current { color: #ccc; font-size: 0.9rem; }
+        .section-title { color: #888; font-size: 0.9rem; margin-bottom: 1rem; margin-top: 1.5rem; }
+        .empty-state { text-align: center; padding: 3rem; color: #666; }
+        .empty-state i { font-size: 3rem; display: block; margin-bottom: 1rem; }
 
-        /* Folder Grid */
-        .folder-grid {
-            display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.5rem;
+        /* Grid */
+        .item-grid { display: flex; flex-wrap: wrap; gap: 1rem; }
+        .card-item {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 1rem; width: 200px; overflow: hidden; transition: transform 0.2s;
         }
-        .folder-card {
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 0.8rem; padding: 1rem 0.5rem; text-align: center;
-            cursor: pointer; transition: all 0.2s; width: 100px; text-decoration: none;
-        }
-        .folder-card:hover { background: rgba(254,202,87,0.12); border-color: #feca57; transform: translateY(-2px); }
-        .folder-card .folder-icon { font-size: 2rem; color: #feca57; margin-bottom: 0.3rem; }
-        .folder-card .folder-name { font-size: 0.8rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-item:hover { transform: translateY(-2px); }
 
-        /* Photo Grid */
-        .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 0.8rem;
-        }
-        .photo-card {
-            background: rgba(255,255,255,0.05); border-radius: 0.8rem;
-            overflow: hidden; position: relative; transition: transform 0.2s;
-        }
-        .photo-card:hover { transform: translateY(-2px); }
-        .photo-card img {
+        .card-item .thumb {
             width: 100%; height: 150px; object-fit: cover; display: block;
         }
-        .photo-card .name {
-            padding: 0.4rem 0.6rem; font-size: 0.8rem; color: #aaa;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        .card-item .thumb-folder {
+            width: 100%; height: 150px; display: flex; align-items: center; justify-content: center;
+            background: rgba(254,202,87,0.06); font-size: 3.5rem; color: #feca57;
         }
-        .photo-card .days {
-            padding: 0 0.6rem 0.5rem; font-size: 0.75rem;
+        .card-item .info { padding: 0.5rem 0.7rem; }
+        .card-item .name {
+            font-size: 0.85rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
+        .card-item .path {
+            font-size: 0.7rem; color: #666; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .card-item .days { font-size: 0.75rem; padding: 0 0.7rem 0.5rem; }
         .days-danger { color: #ff6b6b; } .days-warning { color: #feca57; } .days-ok { color: #54a0ff; }
 
-        .photo-card .actions {
-            padding: 0 0.6rem 0.6rem; display: flex; gap: 0.4rem;
-        }
-        .photo-card .actions .btn {
+        .card-item .actions { padding: 0 0.7rem 0.7rem; display: flex; gap: 0.4rem; }
+        .card-item .btn {
             flex: 1; font-size: 0.75rem; border-radius: 0.5rem; padding: 0.3rem;
-            border: none; cursor: pointer;
+            border: none; cursor: pointer; transition: all 0.2s;
         }
         .btn-restore { background: rgba(84,160,255,0.15); color: #54a0ff; }
         .btn-restore:hover { background: rgba(84,160,255,0.3); }
         .btn-delete-forever { background: rgba(255,107,107,0.15); color: #ff6b6b; }
         .btn-delete-forever:hover { background: rgba(255,107,107,0.3); }
-
-        .section-title { color: #888; font-size: 0.9rem; margin-bottom: 0.8rem; }
-        .empty-state { text-align: center; padding: 3rem; color: #666; }
-        .empty-state i { font-size: 3rem; display: block; margin-bottom: 1rem; }
 
         /* Toast */
         .toast-container {
@@ -104,21 +76,16 @@
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         .toast-success { background: rgba(46,213,115,0.85); color: #fff; }
         .toast-error { background: rgba(255,107,107,0.85); color: #fff; }
-        .toast-warning { background: rgba(254,202,87,0.85); color: #1a1a2e; }
 
-        /* Confirm modal */
-        .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 9999; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
-        .confirm-dialog { background: rgba(30,30,50,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.2rem; padding: 2rem; max-width: 380px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); animation: scaleIn 0.25s ease; }
+        /* Confirm */
+        .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .confirm-dialog { background: rgba(30,30,50,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.2rem; padding: 2rem; max-width: 380px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
         .confirm-dialog i { font-size: 2.5rem; margin-bottom: 1rem; }
         .confirm-dialog h4 { color: #fff; font-size: 1.15rem; margin-bottom: 0.5rem; }
         .confirm-dialog p { color: #999; font-size: 0.85rem; margin-bottom: 1.5rem; }
         .confirm-dialog .btn-row { display: flex; gap: 0.8rem; justify-content: center; }
         .confirm-dialog .btn-cancel { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid rgba(255,255,255,0.15); border-radius: 2rem; padding: 0.5rem 1.5rem; cursor: pointer; }
         .confirm-dialog .btn-danger { background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: #fff; border: none; border-radius: 2rem; padding: 0.5rem 1.5rem; cursor: pointer; }
-        @keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        .folder-card .actions { display: flex; gap: 0.3rem; padding: 0.3rem 0 0; justify-content: center; }
-        .folder-card .actions .btn { font-size: 0.7rem; padding: 0.2rem 0.4rem; border-radius: 0.4rem; }
     </style>
 </head>
 <body>
@@ -134,68 +101,58 @@
 </nav>
 
 <div class="container-main">
-    <!-- Breadcrumb -->
-    <div class="breadcrumb-nav">
-        {% for bc in breadcrumbs %}
-            {% if not forloop.last %}
-            <a href="?folder_id={{ bc.id }}">{{ bc.name }}</a>
-            <span class="sep">/</span>
-            {% else %}
-            <span class="current">{{ bc.name }}</span>
-            {% endif %}
-        {% endfor %}
-    </div>
-
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Folders -->
     {% if folders %}
-    <h6 class="section-title"><i class="fas fa-folder"></i> 文件夹</h6>
-    <div class="folder-grid">
+    <h5 class="section-title"><i class="fas fa-folder"></i> 文件夹</h5>
+    <div class="item-grid">
         {% for folder in folders %}
-        <div class="folder-card" onclick="location.href='?folder_id={{ folder.id }}'">
-            <div class="folder-icon"><i class="fas fa-folder"></i></div>
-            <div class="folder-name">{{ folder.name }}</div>
-            <div class="days {% if folder.days_left <= 3 %}days-danger{% elif folder.days_left <= 7 %}days-warning{% else %}days-ok{% endif %}" style="font-size:0.7rem;margin-top:0.2rem;">
-                {{ folder.days_left }}天
+        <div class="card-item" id="card-folder-{{ folder.id }}">
+            <div class="thumb-folder"><i class="fas fa-folder"></i></div>
+            <div class="info">
+                <div class="name" title="{{ folder.name }}">{{ folder.name }}</div>
+                <div class="path" title="{{ folder.full_path }}">{{ folder.full_path }}</div>
+            </div>
+            <div class="days {% if folder.days_left <= 3 %}days-danger{% elif folder.days_left <= 7 %}days-warning{% else %}days-ok{% endif %}">
+                <i class="far fa-clock"></i> 剩余 {{ folder.days_left }} 天
             </div>
             <div class="actions">
-                <button class="btn btn-restore" onclick="event.stopPropagation();restoreFolder({{ folder.id }})"><i class="fas fa-undo"></i></button>
-                <button class="btn btn-delete-forever" onclick="event.stopPropagation();deleteFolderForever({{ folder.id }})"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-restore" onclick="restoreFolder({{ folder.id }})"><i class="fas fa-undo"></i> 恢复</button>
+                <button class="btn btn-delete-forever" onclick="deleteFolderForever({{ folder.id }})"><i class="fas fa-trash"></i> 彻底删除</button>
             </div>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <!-- Files -->
-    <h6 class="section-title"><i class="fas fa-images"></i> 文件</h6>
     {% if files %}
-    <div class="photo-grid">
+    <h5 class="section-title"><i class="fas fa-images"></i> 文件</h5>
+    <div class="item-grid">
         {% for file in files %}
-        <div class="photo-card" id="card-{{ file.id }}">
-            <img src="{{ file.url }}" alt="{{ file.name }}" loading="lazy"
+        <div class="card-item" id="card-{{ file.id }}">
+            <img class="thumb" src="{{ file.url }}" alt="{{ file.name }}" loading="lazy"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23333%22 width=%22200%22 height=%22150%22/><text fill=%22%23777%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22>加载失败</text></svg>'">
-            <div class="name">{{ file.name }}</div>
+            <div class="info">
+                <div class="name" title="{{ file.name }}">{{ file.name }}</div>
+                <div class="path" title="{{ file.full_path }}">{% if file.full_path %}{{ file.full_path }}/{% endif %}</div>
+            </div>
             <div class="days {% if file.days_left <= 3 %}days-danger{% elif file.days_left <= 7 %}days-warning{% else %}days-ok{% endif %}">
                 <i class="far fa-clock"></i> 剩余 {{ file.days_left }} 天
             </div>
             <div class="actions">
                 <button class="btn btn-restore" onclick="restoreFile({{ file.id }})"><i class="fas fa-undo"></i> 恢复</button>
-                <button class="btn btn-delete-forever" onclick="deleteForever({{ file.id }})"><i class="fas fa-trash"></i> 删除</button>
+                <button class="btn btn-delete-forever" onclick="deleteForever({{ file.id }})"><i class="fas fa-trash"></i> 彻底删除</button>
             </div>
         </div>
         {% endfor %}
     </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fas fa-inbox"></i>
-        <p>{% if current_folder %}此文件夹为空{% else %}回收站为空{% endif %}</p>
-    </div>
+    {% endif %}
+
+    {% if not folders and not files %}
+    <div class="empty-state"><i class="fas fa-inbox"></i><p>回收站为空</p></div>
     {% endif %}
 </div>
 
-<!-- Confirm Modal -->
 <div id="confirmModal" class="confirm-overlay" style="display:none;">
     <div class="confirm-dialog">
         <i class="fas fa-triangle-exclamation" style="background:linear-gradient(135deg,#ff6b6b,#feca57);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></i>
@@ -227,8 +184,8 @@ function restoreFile(id) {
 function restoreFolder(id) {
     $.post('/fdfs/folder/restore/', {id: id}, function(res) {
         if (res.status === 0) {
-            showToast('文件夹已恢复', 'success');
-            setTimeout(function() { location.reload(); }, 500);
+            $('#card-folder-' + id).fadeOut(300, function() { $(this).remove(); });
+            showToast('文件夹及上级已恢复', 'success');
         } else { showToast(res.message || '恢复失败', 'error'); }
     }).fail(function() { showToast('网络错误', 'error'); });
 }
@@ -248,8 +205,8 @@ function deleteFolderForever(id) {
     customConfirm('彻底删除文件夹？', '文件夹内所有内容将被永久删除', function() {
         $.post('/fdfs/folder/permanent_delete/', {id: id}, function(res) {
             if (res.status === 0) {
+                $('#card-folder-' + id).fadeOut(300, function() { $(this).remove(); });
                 showToast('已彻底删除', 'success');
-                setTimeout(function() { location.reload(); }, 500);
             } else { showToast(res.message || '删除失败', 'error'); }
         }).fail(function() { showToast('网络错误', 'error'); });
     });

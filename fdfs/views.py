@@ -279,61 +279,56 @@ def delete(request):
 
 @login_require
 def recycle_bin(request):
-    """回收站 — 按目录浏览已删除内容"""
+    """回收站 — 只显示顶层已删除项"""
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
     from datetime import datetime, timedelta
     now = datetime.now()
     
-    # 当前浏览的已删除文件夹（0=根）
-    folder_id = request.GET.get("folder_id", "0").strip()
-    current_folder = None
+    # 顶层文件夹：已删除且没有已删除的上级
+    deleted_ids = set(Folder.objects.filter(user_id=user_id, is_deleted=True).values_list('id', flat=True))
+    all_deleted_folders = Folder.objects.filter(user_id=user_id, is_deleted=True)
+    top_folders = [f for f in all_deleted_folders if f.parent_id not in deleted_ids]
     
-    if folder_id != "0":
-        try:
-            current_folder = Folder.objects.get(id=int(folder_id), user_id=user_id, is_deleted=True)
-            sub_folders = Folder.objects.filter(user_id=user_id, parent=current_folder, is_deleted=True)
-            files = File.objects.filter(user_id=user_id, folder=current_folder, is_deleted=True)
-        except Folder.DoesNotExist:
-            sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=True)
-            files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=True)
-            folder_id = "0"
-            current_folder = None
-    else:
-        sub_folders = Folder.objects.filter(user_id=user_id, parent__isnull=True, is_deleted=True)
-        files = File.objects.filter(user_id=user_id, folder__isnull=True, is_deleted=True)
+    # 顶层文件：已删除且所在文件夹未删除（或无文件夹）
+    top_files = File.objects.filter(
+        user_id=user_id, is_deleted=True
+    ).exclude(
+        folder_id__in=deleted_ids
+    )
     
-    # 面包屑
-    breadcrumbs = [{'id': 0, 'name': '回收站'}]
-    if current_folder:
-        ancestors = []
-        f = current_folder
-        while f:
-            ancestors.insert(0, f)
-            f = f.parent
-        for a in ancestors:
-            breadcrumbs.append({'id': a.id, 'name': a.name})
+    # 构建路径和剩余天数
+    for f in top_folders:
+        f.days_left = 30
+        if f.deleted_at:
+            f.days_left = max(30 - (now - f.deleted_at.replace(tzinfo=None)).days, 0)
+        f.full_path = _build_path(f)
     
-    # 计算剩余天数
-    for f in files:
+    for f in top_files:
         f.url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
             f.file_id.split('/M00/')[1])
         f.days_left = 30
         if f.deleted_at:
             f.days_left = max(30 - (now - f.deleted_at.replace(tzinfo=None)).days, 0)
-    
-    for f in sub_folders:
-        f.days_left = 30
-        if f.deleted_at:
-            f.days_left = max(30 - (now - f.deleted_at.replace(tzinfo=None)).days, 0)
+        f.full_path = _build_path(f.folder) if f.folder else ''
     
     return render(request, 'recycle_bin.html', {
-        'files': files,
-        'folders': sub_folders,
-        'breadcrumbs': breadcrumbs,
-        'current_folder': current_folder,
+        'folders': top_folders,
+        'files': top_files,
         'request': request,
     })
+
+
+def _build_path(folder):
+    """构建文件夹完整路径"""
+    if not folder:
+        return ''
+    parts = []
+    f = folder
+    while f:
+        parts.insert(0, f.name)
+        f = f.parent
+    return '/'.join(parts)
 
 
 @login_require
@@ -509,20 +504,29 @@ def delete_folder(request):
 
 @login_require
 def restore_folder(request):
-    """从回收站恢复文件夹及其子内容"""
+    """从回收站恢复文件夹及其上级链"""
     f_id = int(request.POST.get("id"))
     try:
         folder = Folder.objects.get(id=f_id, is_deleted=True)
     except Folder.DoesNotExist:
         return JsonResponse(data={"status": Status.error.value, "message": "文件夹不存在"})
-    def restore(f):
+    # 恢复上级链
+    def restore_chain(f):
+        if f.parent and f.parent.is_deleted:
+            restore_chain(f.parent)
         f.is_deleted = False
         f.deleted_at = None
         f.save()
+    restore_chain(folder)
+    # 恢复子内容
+    def restore_children(f):
         for sub in Folder.objects.filter(parent=f, is_deleted=True):
-            restore(sub)
+            restore_children(sub)
+            sub.is_deleted = False
+            sub.deleted_at = None
+            sub.save()
         File.objects.filter(folder=f, is_deleted=True).update(is_deleted=False, deleted_at=None)
-    restore(folder)
+    restore_children(folder)
     return JsonResponse(data={"status": Status.success.value, "message": "文件夹已恢复"})
 
 
