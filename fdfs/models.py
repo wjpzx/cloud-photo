@@ -49,7 +49,7 @@ class Share(models.Model):
     """分享链接模型"""
     file = models.ForeignKey(File, on_delete=models.CASCADE, verbose_name="分享文件")
     user = models.ForeignKey("User", on_delete=models.CASCADE, verbose_name="分享者")
-    code = models.CharField(verbose_name="分享码", max_length=32, unique=True, default=uuid.uuid4)
+    code = models.CharField(verbose_name="分享码", max_length=36, unique=True, default=uuid.uuid4)
     password = models.CharField(verbose_name="访问密码", max_length=6, blank=True, default="")
     expire_hours = models.IntegerField(verbose_name="有效期(小时)", default=24)
     create_time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)

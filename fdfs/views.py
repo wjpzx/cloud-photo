@@ -449,10 +449,12 @@ def permanent_delete_folder(request):
 @login_require
 def move_file(request):
     """移动文件到文件夹"""
+    session_id = request.COOKIES.get("session_id")
+    user_id = get_user_id_by_session_id(session_id)
     file_id = int(request.POST.get("file_id"))
     folder_id = request.POST.get("folder_id", "").strip()
     try:
-        f = File.objects.get(id=file_id, is_deleted=False)
+        f = File.objects.get(id=file_id, user_id=user_id, is_deleted=False)
         if folder_id and folder_id != "0":
             target = Folder.objects.get(id=int(folder_id), is_deleted=False)
             f.folder = target

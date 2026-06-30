@@ -484,6 +484,9 @@
             from { transform: scale(0.85); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
+        /* 输入框 placeholder 颜色 */
+        .confirm-dialog input::placeholder,
+        .card input::placeholder { color: #888; }
     </style>
 </head>
 <body>
@@ -550,11 +553,10 @@
         {% for folder in folders %}
         <div class="folder-card" data-folder-id="{{ folder.id }}"
              ondragover="folderDragOver(event)" ondragleave="folderDragLeave(event)" ondrop="folderDrop(event, {{ folder.id }})"
-             oncontextmenu="folderContextMenu(event, {{ folder.id }}, '{{ folder.name|escapejs }}')">
-            <a href="?folder_id={{ folder.id }}" class="text-decoration-none">
-                <div class="folder-icon"><i class="fas fa-folder"></i></div>
-                <div class="folder-name">{{ folder.name }}</div>
-            </a>
+             oncontextmenu="folderContextMenu(event, {{ folder.id }}, '{{ folder.name|escapejs }}')"
+             onclick="location.href='?folder_id={{ folder.id }}'">
+            <div class="folder-icon"><i class="fas fa-folder"></i></div>
+            <div class="folder-name">{{ folder.name }}</div>
         </div>
         {% endfor %}
     </div>
