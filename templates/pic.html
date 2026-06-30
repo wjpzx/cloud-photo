@@ -185,9 +185,10 @@
             background: rgba(84,160,255,0.15);
             outline: 2px dashed #54a0ff;
         }
-        .breadcrumb-sep {
+        .breadcrumb-item:not(.current)::after {
+            content: '/';
             color: #555;
-            margin: 0 0.1rem;
+            margin-left: 0.3rem;
         }
 
         /* --- Photo Grid --- */
@@ -584,7 +585,6 @@
                           ondragover="breadcrumbDragOver(event, {{ bc.id }})" ondragleave="folderDragLeave(event)"
                           ondrop="breadcrumbDrop(event, {{ bc.id }})">
                         <a href="?folder_id={{ bc.id }}">{{ bc.name }}</a>
-                        <span class="breadcrumb-sep">/</span>
                     </span>
                     {% else %}
                     <span class="breadcrumb-item current" data-folder-id="{{ bc.id }}">
@@ -1044,17 +1044,24 @@
         dragFileId = null;
     }
 
-    // 文件夹悬停延时自动进入
+    // 文件夹悬停延时：先移动文件，再进入文件夹
     function setupFolderHoverTimers() {
         document.querySelectorAll('.folder-card').forEach(function(card) {
             card.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var fid = this.getAttribute('data-folder-id');
-                if (!fid) return;
+                if (!fid || !dragFileId) return;
                 clearTimeout(navigateTimer);
                 navigateTimer = setTimeout(function() {
-                    location.href = '?folder_id=' + fid;
+                    // 先移动文件到目标文件夹
+                    $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: fid}, function(res) {
+                        dragFileId = null;
+                        location.href = '?folder_id=' + fid;
+                    }).fail(function() {
+                        dragFileId = null;
+                        location.href = '?folder_id=' + fid;
+                    });
                 }, NAVIGATE_DELAY);
             });
         });
