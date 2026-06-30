@@ -282,10 +282,39 @@ def recycle_bin(request):
     """回收站 — 查看已删除文件和文件夹"""
     session_id = request.COOKIES.get("session_id")
     user_id = get_user_id_by_session_id(session_id)
-    files = File.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
-    folders = Folder.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
     from datetime import datetime, timedelta
     now = datetime.now()
+    files = File.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
+    all_deleted_folders = Folder.objects.filter(user_id=user_id, is_deleted=True).order_by('-deleted_at')
+    
+    # 构建文件夹树：只展示顶层文件夹，子文件夹作为 children
+    folder_map = {f.id: f for f in all_deleted_folders}
+    root_folders = []
+    for f in all_deleted_folders:
+        f.children = []
+        f.depth = 0
+        f.days_left = 30
+        if f.deleted_at:
+            f.days_left = max(30 - (datetime.now() - f.deleted_at.replace(tzinfo=None)).days, 0)
+        f.item_type = 'folder'
+        if f.parent_id and f.parent_id in folder_map:
+            parent = folder_map[f.parent_id]
+            f.depth = parent.depth + 1
+            parent.children.append(f)
+        else:
+            root_folders.append(f)
+    
+    # 扁平化树结构，带深度信息
+    flat_folders = []
+    def flatten(node_list, depth):
+        for node in node_list:
+            node._depth = depth
+            node._indent = depth * 30  # px 缩进
+            flat_folders.append(node)
+            if hasattr(node, 'children') and node.children:
+                flatten(node.children, depth + 1)
+    flatten(root_folders, 0)
+    
     for f in files:
         f.url = settings.FASTDFS_FILE_PATH.get(f.file_id.split('/M00/')[0])['url_format'].format(
             f.file_id.split('/M00/')[1])
@@ -295,13 +324,7 @@ def recycle_bin(request):
         else:
             f.days_left = 30
         f.item_type = 'file'
-    for f in folders:
-        f.days_left = 30
-        if f.deleted_at:
-            days_left = 30 - (now - f.deleted_at.replace(tzinfo=None)).days
-            f.days_left = max(days_left, 0)
-        f.item_type = 'folder'
-    return render(request, 'recycle_bin.html', {'files': files, 'folders': folders, 'request': request})
+    return render(request, 'recycle_bin.html', {'files': files, 'folders': flat_folders, 'request': request})
 
 
 @login_require

@@ -265,7 +265,7 @@
     {% if files or folders %}
     <div class="grid">
         {% for folder in folders %}
-        <div class="card-item" id="card-folder-{{ folder.id }}">
+        <div class="card-item" id="card-folder-{{ folder.id }}" style="margin-left:{{ folder._indent }}px;">
             <div class="thumb-folder">
                 <i class="fas fa-folder" style="font-size:4rem;color:#feca57;"></i>
             </div>
