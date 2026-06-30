@@ -13,6 +13,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
 from django.conf import settings
 
 from django.contrib import admin
@@ -26,4 +27,6 @@ urlpatterns = [
     path('', views.index),
     path('fdfs/', include('fdfs.urls')),
     re_path(r'^fdfs/media/(?P<path>.+)$', views.serve_file),
+    re_path(r'^static/(?P<path>.*)$', static.serve,
+            {'document_root': os.path.join(settings.BASE_DIR, 'static')}),
 ]
