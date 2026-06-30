@@ -636,7 +636,9 @@
         </div>
     </div>
 
-    <div id="dynamicContent">
+    <div id="dynamicContent"
+         ondragover="folderDragOver(event)" ondragleave="folderDragLeave(event)"
+         ondrop="dropToCurrentFolder(event)">
     <!-- Folders Section -->
     {% if folders %}
     <div class="folder-grid mb-3">
@@ -1038,6 +1040,24 @@
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: '0'}, function(res) {
             if (res.status === 0) {
                 showMessage('success', '已移到根目录');
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                showMessage('danger', res.message);
+            }
+        }).fail(function() { showMessage('danger', '移动失败'); });
+        dragFileId = null;
+    }
+
+    // 放到当前文件夹区域（照片区）
+    function dropToCurrentFolder(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove('drag-over');
+        clearTimeout(navigateTimer);
+        if (!dragFileId || currentFolderId === '0') return;
+        $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: currentFolderId}, function(res) {
+            if (res.status === 0) {
+                showMessage('success', '已移动');
                 setTimeout(function() { location.reload(); }, 500);
             } else {
                 showMessage('danger', res.message);
