@@ -527,6 +527,9 @@ def move_file(request):
     folder_id = request.POST.get("folder_id", "").strip()
     try:
         f = File.objects.get(id=file_id, user_id=user_id, is_deleted=False)
+        current_folder_id = str(f.folder_id) if f.folder_id else "0"
+        if current_folder_id == folder_id:
+            return JsonResponse(data={"status": Status.warning.value, "message": "已在目标位置"})
         if folder_id and folder_id != "0":
             target = Folder.objects.get(id=int(folder_id), is_deleted=False)
             f.folder = target

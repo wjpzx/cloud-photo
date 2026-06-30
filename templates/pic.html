@@ -1026,7 +1026,7 @@
             if (res.status === 0) {
                 showMessage('success', '已移动');
                 setTimeout(function() { location.href = '?folder_id=' + folderId; }, 500);
-            } else {
+            } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
         }).fail(function() { showMessage('danger', '移动失败'); });
@@ -1041,7 +1041,7 @@
             if (res.status === 0) {
                 showMessage('success', '已移到根目录');
                 setTimeout(function() { location.href = '?folder_id=0'; }, 500);
-            } else {
+            } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
         }).fail(function() { showMessage('danger', '移动失败'); });
@@ -1059,7 +1059,7 @@
             if (res.status === 0) {
                 showMessage('success', '已移动');
                 setTimeout(function() { location.reload(); }, 500);
-            } else {
+            } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
         }).fail(function() { showMessage('danger', '移动失败'); });
@@ -1086,7 +1086,7 @@
             if (res.status === 0) {
                 showMessage('success', '已移动');
                 setTimeout(function() { location.href = '?folder_id=' + folderId; }, 500);
-            } else {
+            } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
         }).fail(function() { showMessage('danger', '移动失败'); });
