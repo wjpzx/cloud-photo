@@ -270,10 +270,6 @@ def permanent_delete(request):
                 fastdfs_server.delete_file(remote_file_id)
             except Exception as e:
                 logger.warning("FastDFS 删除文件失败（可能不存在）: %s, error: %s", remote_file_id, e)
-            # 删除本地缓存
-            local_path = os.path.join('/var/fdfs/data/data', remote_file_id.split('/M00/')[1] if '/M00/' in remote_file_id else remote_file_id)
-            if os.path.exists(local_path):
-                os.remove(local_path)
             # 从数据库删除
             f.delete()
             return JsonResponse(data={"status": Status.success.value, "message": "已彻底删除"})
@@ -294,38 +290,20 @@ def move_pic(request):
 
 @login_require
 def serve_file(request, path):
-    """登录后才能访问的图片文件 — 优先本地缓存，否则从云端 FastDFS 下载"""
-    local_dir = '/var/fdfs/data/data'
-    file_path = os.path.join(local_dir, path)
-    
-    # 本地缓存存在就直接返回
-    if os.path.exists(file_path):
-        content_types = {
-            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-            '.png': 'image/png', '.gif': 'image/gif',
-            '.mp4': 'video/mp4', '.webp': 'image/webp',
-        }
-        ext = os.path.splitext(file_path)[1].lower()
-        content_type = content_types.get(ext, 'application/octet-stream')
-        return FileResponse(open(file_path, 'rb'), content_type=content_type)
-    
-    # 本地没有，从云端 FastDFS 下载
+    """登录后才能访问的图片文件 — 直接从云端 FastDFS 下载到内存返回"""
     remote_file_id = 'group1/M00/' + path
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     try:
-        fastdfs_server.download_file(remote_file_id, file_path)
+        result = fastdfs_server.client.download_to_buffer(remote_file_id.encode())
+        content = result['Content']
     except Exception as e:
         logger.error("从云端下载文件失败: %s, error: %s" % (remote_file_id, e))
         raise Http404("文件不存在或云端不可达")
-    
-    if not os.path.exists(file_path):
-        raise Http404
     
     content_types = {
         '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
         '.png': 'image/png', '.gif': 'image/gif',
         '.mp4': 'video/mp4', '.webp': 'image/webp',
     }
-    ext = os.path.splitext(file_path)[1].lower()
+    ext = os.path.splitext(path)[1].lower()
     content_type = content_types.get(ext, 'application/octet-stream')
-    return FileResponse(open(file_path, 'rb'), content_type=content_type)
+    return HttpResponse(content, content_type=content_type)
