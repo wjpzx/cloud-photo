@@ -120,10 +120,6 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 SECURE_SSL_REDIRECT = False
-# nginx HTTPS 反向代理 → 信任 X-Forwarded-Proto 头
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
 # 配置https post相关请求时关于csrf的携带，下述域名及其子域名可允许不携带CSRFViewMiddleware
 # CSRF_COOKIE_DOMAIN = ".serendipity.wang"
 

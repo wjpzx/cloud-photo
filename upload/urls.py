@@ -19,6 +19,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.views import static
 from django.urls import path, include, re_path
+from django.views.generic.base import RedirectView
 
 from fdfs import views
 
@@ -29,4 +30,5 @@ urlpatterns = [
     re_path(r'^fdfs/media/(?P<path>.+)$', views.serve_file),
     re_path(r'^static/(?P<path>.*)$', static.serve,
             {'document_root': os.path.join(settings.BASE_DIR, 'static')}),
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
 ]
