@@ -324,7 +324,7 @@ def recycle_bin(request):
         else:
             f.days_left = 30
         f.item_type = 'file'
-    return render(request, 'recycle_bin.html', {'files': files, 'folders': flat_folders, 'request': request})
+    return render(request, 'recycle_bin.html', {'files': files, 'folders': root_folders, 'request': request})
 
 
 @login_require

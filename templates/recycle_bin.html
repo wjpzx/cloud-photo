@@ -90,9 +90,19 @@
 
         /* Grid */
         .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 1rem;
+        }
+        .grid .card-item {
+            width: 200px;
+            flex-shrink: 0;
+        }
+        .recycle-folder-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-start;
         }
 
         /* Card */
@@ -265,30 +275,14 @@
     {% if files or folders %}
     <div class="grid">
         {% for folder in folders %}
-        <div class="card-item" id="card-folder-{{ folder.id }}" style="margin-left:{{ folder.indent }}px;">
-            <div class="thumb-folder">
-                <i class="fas fa-folder" style="font-size:4rem;color:#feca57;"></i>
-            </div>
-            <div class="info">
-                <div class="name" title="{{ folder.name }}">{{ folder.name }}</div>
-                <div class="days {% if folder.days_left <= 3 %}days-danger{% elif folder.days_left <= 7 %}days-warning{% else %}days-ok{% endif %}">
-                    <i class="far fa-clock"></i> 剩余 {{ folder.days_left }} 天
-                </div>
-            </div>
-            <div class="actions">
-                <button class="btn btn-restore" onclick="restoreFolder({{ folder.id }})">
-                    <i class="fas fa-undo"></i> 恢复
-                </button>
-                <button class="btn btn-delete-forever" onclick="deleteFolderForever({{ folder.id }})">
-                    <i class="fas fa-trash"></i> 彻底删除
-                </button>
-            </div>
-        </div>
+            {% include "recycle_folder_item.html" with folder=folder indent=0 %}
         {% endfor %}
         {% for file in files %}
         <div class="card-item" id="card-{{ file.id }}">
+            <div class="thumb-folder">
             <img class="thumb" src="{{ file.url }}" alt="{{ file.name }}" loading="lazy"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22160%22><rect fill=%22%23333%22 width=%22200%22 height=%22160%22/><text fill=%22%23777%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22>图片加载失败</text></svg>'">
+            </div>
             <div class="info">
                 <div class="name" title="{{ file.name }}">{{ file.name }}</div>
                 <div class="days {% if file.days_left <= 3 %}days-danger{% elif file.days_left <= 7 %}days-warning{% else %}days-ok{% endif %}">
