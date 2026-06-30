@@ -539,6 +539,32 @@
         /* 输入框 placeholder 颜色 */
         .confirm-dialog input::placeholder,
         .card input::placeholder { color: #888; }
+
+        /* --- 回到顶部按钮 --- */
+        #backToTop {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(30,30,50,0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #ccc;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            transition: all 0.2s;
+        }
+        #backToTop:hover {
+            background: rgba(84,160,255,0.25);
+            color: #54a0ff;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -1286,6 +1312,16 @@ document.getElementById('confirmOkBtn').addEventListener('click', function() {
         _confirmCallback = null;
         cb();
     }
+});
+</script>
+
+<!-- 回到顶部 -->
+<button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">
+    <i class="fas fa-chevron-up"></i>
+</button>
+<script>
+window.addEventListener('scroll', function() {
+    document.getElementById('backToTop').style.display = window.scrollY > 300 ? 'flex' : 'none';
 });
 </script>
 </body>
