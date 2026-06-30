@@ -8,6 +8,7 @@ from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 import logging
 
 from django.shortcuts import render, redirect
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger('fdfs')
@@ -515,6 +516,7 @@ def share_page(request, code):
     })
 
 
+@csrf_exempt
 def verify_share(request):
     """验证分享密码"""
     code = request.POST.get("code")

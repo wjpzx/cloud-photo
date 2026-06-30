@@ -554,7 +554,7 @@
         <div class="folder-card" data-folder-id="{{ folder.id }}"
              ondragover="folderDragOver(event)" ondragleave="folderDragLeave(event)" ondrop="folderDrop(event, {{ folder.id }})"
              oncontextmenu="folderContextMenu(event, {{ folder.id }}, '{{ folder.name|escapejs }}')"
-             onclick="location.href='?folder_id={{ folder.id }}'">
+             onclick="if(!dragJustDropped)location.href='?folder_id={{ folder.id }}';dragJustDropped=false;">
             <div class="folder-icon"><i class="fas fa-folder"></i></div>
             <div class="folder-name">{{ folder.name }}</div>
         </div>
@@ -904,8 +904,10 @@
 
     // --- Drag & Drop ---
     var dragFileId = null;
+    var dragJustDropped = false;
     function dragStart(e, fileId) {
         dragFileId = fileId;
+        dragJustDropped = false;
         e.dataTransfer.effectAllowed = 'move';
     }
     function folderDragOver(e) {
@@ -919,6 +921,7 @@
         e.preventDefault();
         e.currentTarget.classList.remove('drag-over');
         if (!dragFileId) return;
+        dragJustDropped = true;
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: folderId}, function(res) {
             if (res.status === 0) {
                 showMessage('success', '已移动');
@@ -971,9 +974,18 @@
             },
             success: function(res) {
                 if (res.status === 0) {
-                    $('#shareUrl').val(res.share_url);
-                    $('#shareResult').show();
-                    showMessage('success', '分享链接已生成，点击链接复制');
+                    // 自动复制到剪贴板
+                    var url = res.share_url;
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(url).then(function() {
+                            showMessage('success', '链接已复制到剪贴板');
+                        });
+                    } else {
+                        $('#shareUrl').val(url);
+                        $('#shareResult').show();
+                        showMessage('success', '分享链接已生成');
+                    }
+                    setTimeout(function() { closeShareModal(); }, 800);
                 } else {
                     showMessage('danger', res.message);
                 }
