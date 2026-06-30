@@ -909,7 +909,7 @@
             if (res.status === 0) {
                 showMessage('success', '文件夹已创建');
                 $('#folderCreateModal').hide();
-                setTimeout(function() { location.reload(); }, 500);
+                setTimeout(function() { window.location.reload(); }, 500);
             } else {
                 showMessage('danger', res.message);
             }
@@ -938,7 +938,7 @@
             if (res.status === 0) {
                 showMessage('success', '已重命名');
                 $('#folderRenameModal').hide();
-                setTimeout(function() { location.reload(); }, 500);
+                setTimeout(function() { window.location.reload(); }, 500);
             } else {
                 showMessage('danger', res.message);
             }
@@ -991,7 +991,7 @@
             $.post('/fdfs/folder/delete/', {id: contextFolderId}, function(res) {
                 if (res.status === 0) {
                     showMessage('success', '已移入回收站');
-                    setTimeout(function() { location.reload(); }, 500);
+                    setTimeout(function() { window.location.reload(); }, 500);
                 } else {
                     showMessage('danger', res.message);
                 }
@@ -1025,7 +1025,7 @@
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: folderId}, function(res) {
             if (res.status === 0) {
                 showMessage('success', '已移动');
-                setTimeout(function() { location.href = '?folder_id=' + folderId; }, 500);
+                setTimeout(function() { window.location.href = '?folder_id=' + folderId; }, 500);
             } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
@@ -1040,7 +1040,7 @@
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: '0'}, function(res) {
             if (res.status === 0) {
                 showMessage('success', '已移到根目录');
-                setTimeout(function() { location.href = '?folder_id=0'; }, 500);
+                setTimeout(function() { window.location.href = '?folder_id=0'; }, 500);
             } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
@@ -1058,7 +1058,7 @@
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: currentFolderId}, function(res) {
             if (res.status === 0) {
                 showMessage('success', '已移动');
-                setTimeout(function() { location.reload(); }, 500);
+                setTimeout(function() { window.location.reload(); }, 500);
             } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
@@ -1085,7 +1085,7 @@
         $.post('/fdfs/move_file/', {file_id: dragFileId, folder_id: String(folderId)}, function(res) {
             if (res.status === 0) {
                 showMessage('success', '已移动');
-                setTimeout(function() { location.href = '?folder_id=' + folderId; }, 500);
+                setTimeout(function() { window.location.href = '?folder_id=' + folderId; }, 500);
             } else if (res.status !== 1) {
                 showMessage('danger', res.message);
             }
