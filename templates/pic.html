@@ -23,9 +23,17 @@
 
         /* --- Navbar --- */
         .navbar-custom {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
             background: linear-gradient(135deg, #1e3c72, #6a3093);
             padding: 0.8rem 1.5rem;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+        body {
+            padding-top: 60px;
         }
         .navbar-custom .navbar-brand {
             color: #fff;
@@ -372,8 +380,10 @@
     <div class="navbar-brand">
         <i class="fas fa-cloud"></i>云相册
     </div>
-    <a href="{% url 'logout' %}" class="btn-logout"><i class="fas fa-right-from-bracket me-1"></i>退出登录</a>
-    <a href="{% url 'recycle_bin' %}" class="btn-logout ms-2"><i class="fas fa-trash-can me-1"></i>回收站</a>
+    <div class="d-flex">
+        <a href="{% url 'recycle_bin' %}" class="btn-logout me-2"><i class="fas fa-trash-can me-1"></i>回收站</a>
+        <a href="{% url 'logout' %}" class="btn-logout"><i class="fas fa-right-from-bracket me-1"></i>退出登录</a>
+    </div>
 </nav>
 
 <!-- Alert Container -->

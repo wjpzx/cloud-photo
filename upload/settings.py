@@ -137,7 +137,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FASTDFS_FILE_PATH = {
     'group1': {
-        'url_format': '/fdfs/media/{}'
+        'url_format': 'https://www.serendipity.wang/data/{}'
     }
 }
 
